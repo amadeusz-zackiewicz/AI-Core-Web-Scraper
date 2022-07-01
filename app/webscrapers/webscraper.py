@@ -1,7 +1,12 @@
+from xml.dom.minidom import Element
 from selenium import webdriver
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 from time import sleep
+import json
 
 class NotImplementedException(Exception):
     def __init__(self, funcName: str) -> None:
@@ -14,14 +19,25 @@ class NotImplementedException(Exception):
 class FailedToFindButtonToAcceptCookiesException(Exception):
     pass
 
+class FailedToLoadConfigFileException(Exception):
+    pass
+
 class WebScraperBase:
-    def __init__(self, headless=False):
+    def __init__(self, config_file_name, headless=False):
 
         options = webdriver.FirefoxOptions()
         #options.add_argument("--shm-size 2g") # put this in again in case of docker problems
 
         if headless:
             options.add_argument("--headless")
+
+
+        config_file = open(f"app/config/{config_file_name}.json")
+        self.config = json.load(config_file)
+        config_file.close()
+
+        if self.config == None:
+            raise FailedToLoadConfigFileException(config_file_name)
 
         profile = FirefoxProfile()
         profile.set_preference("htpp.response.timeout", 30)
@@ -50,7 +66,7 @@ class WebScraperBase:
 
     def go_to_home(self):
         self.driver.get(self.target_website)
-        sleep(5)
+        sleep(2)
 
     def search(self):
         raise NotImplementedException("search")
@@ -88,15 +104,25 @@ class WebScraperBase:
                 if element != None:
                     element.click()
                     self.driver.switch_to.parent_frame()
-                    sleep(5)
+                    sleep(2)
                     return
             except Exception as e:
-                print(e)
                 continue
             
         return FailedToFindButtonToAcceptCookiesException()
 
-        
+    def select_drop_down_by_value(self, element, target):
+        element.click()
+        selection = Select(element)
+        selection.select_by_value(target)
+        selection.first_selected_option.click()
+
+    def hover_and_click_element(self, element):
+        action = ActionChains(self.driver)
+        action.move_to_element_with_offset(element, 3, 3)
+        action.click()
+        action.perform()
+
 
     def close(self):
         self.driver.close()
