@@ -1,0 +1,117 @@
+{
+    "search":
+    {
+        "Postcode": "",
+        "Distance": "National",
+        "Make": "Any",
+        "Model": "Any",
+        "Model variant": "Any",
+        "Buying with": "Cash",
+        "Min price": "Any",
+        "Max price": "Any",
+        "Finance":
+        {
+            "Deposit": "1000",
+            "Term": "48",
+            "Mileage": "10000"
+        },
+        "Remote options": 
+        {
+            "Home delivery": false,
+            "Click & collect": false
+        },
+        "Keywords": "",
+        "Body type": 
+        {
+            "Hatchback": false, 
+            "Estate": false, 
+            "SUV": false, 
+            "Saloon": false, 
+            "Coupe": false, 
+            "Convertible": false, 
+            "MPV": false, 
+            "Pickup": false
+        },
+        "Mileage": "Any",
+        "Gearbox": "Any",
+        "Fuel type": 
+        {
+            "Bi Fuel": false, 
+            "Diesel": false, 
+            "Diesel Hybrid": false,
+            "Diesel Plug-in Hybrid": false,
+            "Electric": false,
+            "Hydrogen": false,
+            "Petrol": false,
+            "Petrol Hybrid": false,
+            "Petrol Plug-in Hybrid": false
+        },
+        "Age": 
+        {
+            "Select year": true,
+            "Only show new car deals": true,
+            "Min year": "Any",
+            "Max year": "Any"
+        },
+        "Specification":
+        {
+            "Colour":
+            {
+                "Beige": false,
+                "Black": false,
+                "Blue": false,
+                "Brozne": false,
+                "Brown": false,
+                "Burgundy": false,
+                "Gold": false,
+                "Green": false,
+                "Grey": false,
+                "Indigo": false,
+                "Magenta": false,
+                "Maroon": false,
+                "Multicolor": false,
+                "Navy": false,
+                "Orange": false,
+                "Pink": false,
+                "Purple": false,
+                "Red": false,
+                "Silver": false,
+                "Turquoise": false,
+                "White": false,
+                "Yellow": false
+            },
+            "Doors": "Any",
+            "Min seats": "Any",
+            "Max seats": "Any"
+        },
+        "Accessibility": 
+        {
+            "Wheelchair accessible vehicles (WAV)": false
+        },
+        "Performance":
+        {
+            "Min engine size": "Any",
+            "Max engine size": "Any",
+            "Min engine power": "Any",
+            "Max engine power": "Any",
+            "Acceleration": "Any",
+            "Drivetrain": "Any"
+        },
+        "Running cost":
+        {
+            "Annual tax": "Any",
+            "Insurance group": "Any",
+            "Fuel consumption": "Any",
+            "CO2 emissions": "Any",
+            "Only show ULEZ compliant cars": false
+        },
+        "Preferences":
+        {
+            "Private & trade": "Any",
+            "Cat S/C/D/N": "Include Cat S/C/D/N",
+            "Nothern Ireland adverts only": false,
+            "Manufacturer approved": false,
+            "Additional ads": false
+        }
+    }
+}
