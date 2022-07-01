@@ -1,5 +1,5 @@
 from .webscraper import WebScraperBase
-from selenium.webdriver.common.action_chains import ActionChains
+from time import sleep
 
 class AutotraderWebscraper(WebScraperBase):
     def __init__(self, headless=False):
@@ -25,3 +25,8 @@ class AutotraderWebscraper(WebScraperBase):
         cookie_holder = self.check_for_cookie_prompt(True)
         self.driver.switch_to.frame(cookie_holder)
         super().accept_cookies()
+    
+    def go_to_advanced_search(self):
+        element = self.driver.find_element(self.GET_TYPE_CLASS, "atds-hero__more-options")
+        element.click()
+        sleep(5)

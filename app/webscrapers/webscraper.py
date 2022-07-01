@@ -28,8 +28,9 @@ class WebScraperBase:
         profile.set_preference("dom.max_script_run_time", 30)
 
         self.driver = webdriver.Firefox(firefox_profile=profile, options=options, service_log_path="log.txt")
-        self.driver.implicitly_wait(2)
+        self.driver.implicitly_wait(1)
 
+        self.config_path = ""
         self.target_website = ""
 
         self.GET_TYPE_CSS = By.CSS_SELECTOR
@@ -49,7 +50,7 @@ class WebScraperBase:
 
     def go_to_home(self):
         self.driver.get(self.target_website)
-        sleep(10)
+        sleep(5)
 
     def search(self):
         raise NotImplementedException("search")
@@ -86,6 +87,8 @@ class WebScraperBase:
                 element = self.driver.find_element(*getter)
                 if element != None:
                     element.click()
+                    self.driver.switch_to.parent_frame()
+                    sleep(5)
                     return
             except Exception as e:
                 print(e)
