@@ -1,4 +1,5 @@
 {
+    "earlyAbortSearch": false,
     "search":
     {
         "Postcode": "",
@@ -49,7 +50,7 @@
         "Age": 
         {
             "Select year": true,
-            "Only show new car deals": true,
+            "Only new": true,
             "Min year": "Any",
             "Max year": "Any"
         },
@@ -84,10 +85,7 @@
             "Min seats": "Any",
             "Max seats": "Any"
         },
-        "Accessibility": 
-        {
-            "Wheelchair accessible vehicles (WAV)": false
-        },
+        "WAV": false,
         "Performance":
         {
             "Min engine size": "Any",
@@ -103,13 +101,13 @@
             "Insurance group": "Any",
             "Fuel consumption": "Any",
             "CO2 emissions": "Any",
-            "Only show ULEZ compliant cars": false
+            "Only ULEZ": false
         },
         "Preferences":
         {
             "Private & trade": "Any",
-            "Cat S/C/D/N": "Include Cat S/C/D/N",
-            "Nothern Ireland adverts only": false,
+            "Cat S/C/D/N": "Any",
+            "Nothern Ireland": false,
             "Manufacturer approved": false,
             "Additional ads": false
         }
