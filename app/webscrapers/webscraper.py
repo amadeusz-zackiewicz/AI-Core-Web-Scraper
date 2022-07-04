@@ -119,10 +119,12 @@ class WebScraperBase:
         element.click()
         selection = Select(element)
         selection.select_by_value(target)
+        sleep(0.5)
         selection.first_selected_option.click()
 
     def hover_and_click_element(self, element):
         action = ActionChains(self.driver)
+        self.driver.execute_script("arguments[0].scrollIntoView();", element)
         action.move_to_element_with_offset(element, 3, 3)
         action.click()
         action.perform()
