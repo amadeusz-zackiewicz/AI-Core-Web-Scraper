@@ -80,6 +80,10 @@ class WebScraperBase:
     def go_next_page(self):
         raise NotImplementedException("go_next")
 
+    def input_text(self, element, text):
+        element.click()
+        element.send_keys(text)
+
     def check_for_cookie_prompt(self, return_element=False) -> bool:
         for getter in self.cookie_prompt_getters:
             try:
