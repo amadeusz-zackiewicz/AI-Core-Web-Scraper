@@ -1,5 +1,6 @@
 {
     "earlyAbortSearch": false,
+    "maxPage": 1,
     "search":
     {
         "Postcode": "",

@@ -7,4 +7,6 @@ if __name__ == "__main__":
         scraper.accept_cookies()
     scraper.go_to_advanced_search()
     scraper.search()
+    scraper.scrape_links()
+    scraper.scrape_all_details()
     

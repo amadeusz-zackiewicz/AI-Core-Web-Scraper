@@ -1,9 +1,11 @@
 import imp
+import math
 from xml.dom.minidom import Element
 
 from attr import attr
 from .webscraper import WebScraperBase
 from time import sleep
+import re
 
 
 class AutotraderWebscraper(WebScraperBase):
@@ -83,6 +85,14 @@ class AutotraderWebscraper(WebScraperBase):
         sleep(1)
         hidden_element = element.find_element(self.GET_TYPE_XPATH, "../input")
         return hidden_element.get_attribute("disabled") == None
+
+    def go_next_page(self):
+        url = self.driver.current_url
+        match = re.search('page=[0-9]*', url)
+        page_number = int(match.group().replace("page=", ""))
+        url = url.replace(match.group(), f"page={page_number + 1}")
+        self.driver.get(url)
+        sleep(2)
 
 
     def search(self):
@@ -185,3 +195,30 @@ class AutotraderWebscraper(WebScraperBase):
 
         self.auto_trader_confirm_search_viable()
         self.hover_and_click_element(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="search-cars-button"]')) # Press search button
+
+    def scrape_links(self):
+        maxPage = self.config["maxPage"]
+        page = 1
+        while page <= maxPage:
+            listings = self.driver.find_elements_by_class_name("search-page__result")
+
+            for listing in listings:
+                if listing.get_attribute("data-is-promoted-listing") == None and listing.get_attribute("data-is-yaml-listing") == None:
+                    listing_id = listing.get_attribute("data-advert-id")
+                    self.scraped_links.append(listing_id)
+                    print(listing_id)
+
+            page += 1
+            self.go_next_page()
+
+    def scrape_all_details(self):
+        for listing_id in self.scraped_links:
+            self.scrape_details(self.create_detail_page_address(listing_id))
+
+    def scrape_details(self, link: str):
+        self.driver.get(link)
+        sleep(2)
+        model_make = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="advert-title"]').text
+        total_price = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-testid="total-price-value"]').text
+        mileage = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-testid="mileage"]').text
+        print(f"{model_make} --- {total_price} --- {mileage}")

@@ -51,6 +51,7 @@ class WebScraperBase:
 
         self.config_path = ""
         self.target_website = ""
+        self.scraped_links = []
 
         self.GET_TYPE_CSS = By.CSS_SELECTOR
         self.GET_TYPE_CLASS = By.CLASS_NAME
@@ -82,6 +83,9 @@ class WebScraperBase:
 
     def go_next_page(self):
         raise NotImplementedException("go_next")
+
+    def create_detail_page_address(self, scraped_link: str):
+        return f'{self.target_website}car-details/{scraped_link}'
 
     def input_text(self, element, text):
         element.click()
