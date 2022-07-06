@@ -1,5 +1,7 @@
 import imp
 from xml.dom.minidom import Element
+
+from attr import attr
 from .webscraper import WebScraperBase
 from time import sleep
 
@@ -36,6 +38,8 @@ class AutotraderWebscraper(WebScraperBase):
 
     def auto_trader_click_wide_toggle(self, parent_element, test_id: str):
         sub_element = parent_element.find_element(self.GET_TYPE_XPATH, f'//*[@data-testid="{test_id}-toggle"]')
+        if self.auto_trader_is_wide_button_active(sub_element) == False:
+            raise Exception(f'A button "{test_id}" was disabled, indicating that your search is too narrow.')
         self.hover_and_click_element(sub_element)
         self.auto_trader_confirm_search_viable()
 
@@ -54,7 +58,7 @@ class AutotraderWebscraper(WebScraperBase):
             element = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="search-cars-button"]')
             if element.text == "No cars found":
                 self.driver.close()
-                raise Exception("There are no cars to be found with current settings.")
+                raise Exception("There are no cars to be found with current settings. Please make sure your search criteria is not too narrow.")
             else:
                 print("Current results:", element.text.replace("searchSearch ", ""))
             
@@ -74,6 +78,12 @@ class AutotraderWebscraper(WebScraperBase):
         super().input_text(element, text)
 
         self.auto_trader_confirm_search_viable()
+
+    def auto_trader_is_wide_button_active(self, element):
+        sleep(1)
+        hidden_element = element.find_element(self.GET_TYPE_XPATH, "../input")
+        return hidden_element.get_attribute("disabled") == None
+
 
     def search(self):
 
@@ -149,9 +159,9 @@ class AutotraderWebscraper(WebScraperBase):
         self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="drivetrain"]'), config["Performance"]["Drivetrain"])
 
         ### Specification, without color
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="doorsValue"]'), config["Performance"]["Doors"])
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="minSeats"]'), config["Performance"]["Min seats"])
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="maxSeats"]'), config["Performance"]["Max seats"])
+        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="doorsValue"]'), config["Specification"]["Doors"])
+        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="minSeats"]'), config["Specification"]["Min seats"])
+        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="maxSeats"]'), config["Specification"]["Max seats"])
 
         ### Running cost
         self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="annualTaxValue"]'), config["Running cost"]["Annual tax"])
@@ -171,5 +181,7 @@ class AutotraderWebscraper(WebScraperBase):
         if config["Preferences"]["Additional ads"] == True:
             self.hover_and_click_element(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@id="advertClassification"]'))
         
-        #self.auto_trader_confirm_search_viable()
-        #self.hover_and_click_element(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="search-cars-button"]')) # Press search button
+        # TODO: Add car type and color, this will do for now
+
+        self.auto_trader_confirm_search_viable()
+        self.hover_and_click_element(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="search-cars-button"]')) # Press search button

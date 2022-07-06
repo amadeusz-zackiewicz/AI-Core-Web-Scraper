@@ -49,7 +49,7 @@
         },
         "Age": 
         {
-            "Select year": false,
+            "Select year": true,
             "Only new": true,
             "Min year": "Any",
             "Max year": "Any"

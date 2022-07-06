@@ -1,3 +1,4 @@
+from email import header
 from xml.dom.minidom import Element
 from selenium import webdriver
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
@@ -45,6 +46,8 @@ class WebScraperBase:
 
         self.driver = webdriver.Firefox(firefox_profile=profile, options=options, service_log_path="log.txt")
         self.driver.implicitly_wait(1)
+        if not headless:
+            self.driver.maximize_window()
 
         self.config_path = ""
         self.target_website = ""
