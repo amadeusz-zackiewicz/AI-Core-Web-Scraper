@@ -1,6 +1,6 @@
 {
     "earlyAbortSearch": false,
-    "maxPage": 2,
+    "maxPage": 1,
     "search":
     {
         "Postcode": "EC1M 6BY",
@@ -22,13 +22,13 @@
             "Home delivery": false,
             "Click & collect": false
         },
-        "Keywords": ["satnav", "sunroof"],
+        "Keywords": ["satnav"],
         "Body type": 
         {
             "Hatchback": true, 
             "Estate": false, 
             "SUV": false, 
-            "Saloon": false, 
+            "Saloon": true, 
             "Coupe": false, 
             "Convertible": false, 
             "MPV": false, 
@@ -42,7 +42,7 @@
             "Diesel": false, 
             "Diesel Hybrid": false,
             "Diesel Plug-in Hybrid": false,
-            "Electric": false,
+            "Electric": true,
             "Hydrogen": false,
             "Petrol": true,
             "Petrol Hybrid": false,

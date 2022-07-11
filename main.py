@@ -5,8 +5,8 @@ if __name__ == "__main__":
     scraper.go_to_home()
     if scraper.check_for_cookie_prompt():
         scraper.accept_cookies()
-    scraper.go_to_advanced_search()
     scraper.search()
     scraper.scrape_links()
-    scraper.scrape_all_details()
+    #scraper.scrape_all_details()
+    #scraper.close()
     

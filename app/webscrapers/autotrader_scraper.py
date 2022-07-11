@@ -94,107 +94,153 @@ class AutotraderWebscraper(WebScraperBase):
         self.driver.get(url)
         sleep(2)
 
+    def __generate_multichoice_argument(self, d: dict, argument_name: str) -> str or None:
+        types = []
+        for _type, include in d.items():
+            if include == True:
+                types.append(_type)
+
+        if len(types) == 0:
+            return None
+        else:
+            return f"{argument_name}={'%2C'.join(types)}"
+
+    def __generate_body_type_multichoice_argument(self) -> str or None:
+        return self.__generate_multichoice_argument(self.config['search']['Body type'], 'body-type')
+
+    def __generate_fuel_type_multichoice_argument(self) -> str or None:
+        return self.__generate_multichoice_argument(self.config['search']['Fuel type'], 'fuel-type')
+    
+    def __generate_colour_type_multichoice_argument(self) -> str or None:
+        return self.__generate_multichoice_argument(self.config['search']['Specification']['Colour'], 'colour')
+
+    def __append_optional_argument(self, argument: str, value, current_arguments: list, default_value = "Any"):
+        if type(value) == dict:
+            tmp_value = default_value
+            for v, b in value.items():
+                if b == True:
+                    tmp_value = v
+                    break
+
+            value = tmp_value
+
+        if value != default_value:
+            current_arguments.append(f"{argument}={value}")
+            return True
+        else:
+            return False
 
     def search(self):
 
+        search_arguments = []
         config = self.config["search"]
 
-        ### Post code
-        self.input_text(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@id="postcode"]'), config["Postcode"])
-        ### Distance
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@id="distance"]'), config["Distance"])
+        search_arguments.append(f"postcode={config['Postcode']}")
+        if config['Distance'] != 'National':
+            search_arguments.append(f"radius={config['Distance']}")
 
-        make = config["Make"]
-        
-        ### Make
-        if make != "Any":
-            model = config["Model"]
-            self.select_drop_down_by_value(self.GET_TYPE_XPATH, '//*[@id="make"]', make)
-            self.select_drop_down_by_value(self.GET_TYPE_XPATH, '//*[@id="model"]', model)
-            ### Model
-            if model != "Any":
-                ### Model variant
-                self.select_drop_down_by_value(self.GET_TYPE_XPATH, '//*[@id="aggregatedTrim"]', config["Model variant"])
+        if self.__append_optional_argument("make", config['Make'], search_arguments):
+            if self.__append_optional_argument("model", config['Model'], search_arguments):
+                self.__append_optional_argument("aggregatedTrim", config['Model variant'], search_arguments)
 
-        ### Buying with
-        element = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="search-price-panel"]')
-        buying_with = config["Buying with"]
-        self.auto_trader_click_wide_toggle(element, buying_with.lower())
-        
-        if buying_with == "Finance": ## Finance
-            self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@id="minMonthlyPrice"]'), config["Min price"])
-            self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@id="maxMonthlyPrice"]'), config["Max price"])
-            self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@id="finance-deposit"]'), config["Finance"]["Deposit"])
-            self.auto_trader_click_wide_toggle(element, config["Finance"]["Term"])
-            self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@id="finance-mileage"]'), config["Finance"]["Mileage"])
-        else: ## Cash
-            self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@id="minPrice"]'), config["Min price"])
-            self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@id="maxPrice"]'), config["Max price"])
 
-        ### Remote options
-        if config["Remote options"]["Home delivery"] == True:
-            self.hover_and_click_element(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@id="homeDeliveryAdverts"]'))
-        if config["Remote options"]["Click & collect"] == True:
-            self.hover_and_click_element(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@id="clickAndCollectAvailable"]'))
-        
-        ### Keywords
-        self.auto_trader_add_keywords(config["Keywords"])
-
-        ### Mileage
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="maxMileage"]'), config["Mileage"])
-        ### Gearbox
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="transmission"]'), config["Gearbox"])
-
-        ### Age
-        if config["Age"]["Select year"] == True:
-            self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="minYear"]'), config["Age"]["Min year"])
-            self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="maxYear"]'), config["Age"]["Max year"])
+        if config['Buying with'] == "Finance":
+            self.__append_optional_argument("min-monthly-price", config['Min price'], search_arguments)
+            self.__append_optional_argument("max-monthly-price", config['Max price'], search_arguments)
+            search_arguments.append(f"deposit={config['Finance']['Deposit']}")
+            search_arguments.append(f"term={config['Finance']['Term']}")
+            search_arguments.append(f"yearly-mileage={config['Finance']['Mileage']}")
         else:
-            self.auto_trader_click_wide_toggle(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="search-year-panel"]'), "brand-new")
+            self.__append_optional_argument("price-from", config['Min price'], search_arguments)
+            self.__append_optional_argument("price-to", config['Max price'], search_arguments)
 
-        ## this just switches the toggle above to "Brand new", as far as I can tell it's pointless
-        # if config["Age"]["Only new"] == True:
-        #     self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="deals"]/../span').click()
+        if config['Remote options']['Home delivery'] == True:
+            search_arguments.append("only-delivery-option=on")
+        else:
+            search_arguments.append("include-delivery-option=on")
 
-        ### Wheelchair accessible
-        if config["WAV"] == True:
-            self.hover_and_click_element(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@for="wheelchair-accessible"]'))
+        if config['Remote options']['Click & collect'] == True:
+            search_arguments.append("click-and-collect-available=on")
 
-        ### Performance
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="minEngineSizeLitres"]'), config["Performance"]["Min engine size"])
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="maxEngineSizeLitres"]'), config["Performance"]["Max engine size"])
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="minEnginePower"]'), config["Performance"]["Min engine power"])
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="maxEnginePower"]'), config["Performance"]["Max engine power"])
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="accelerationValue"]'), config["Performance"]["Acceleration"])
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="drivetrain"]'), config["Performance"]["Drivetrain"])
+        keywords = config['Keywords']
 
-        ### Specification, without color
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="doorsValue"]'), config["Specification"]["Doors"])
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="minSeats"]'), config["Specification"]["Min seats"])
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="maxSeats"]'), config["Specification"]["Max seats"])
+        if not "wheelchair" in keywords and config['WAV'] == True:
+                keywords.append("wheelchair")
 
-        ### Running cost
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="annualTaxValue"]'), config["Running cost"]["Annual tax"])
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="maxInsuranceGroup"]'), config["Running cost"]["Insurance group"])
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="fuelConsumptionValue"]'), config["Running cost"]["Fuel consumption"])
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="co2EmissionValue"]'), config["Running cost"]["CO2 emissions"])
-        if config["Running cost"]["Only ULEZ"] == True:
-            self.hover_and_click_element(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="emissionScheme"]'))
+        if len(keywords) > 0:
+            search_arguments.append(f"keywords={'%2C'.join(keywords)}")
 
-        ### Preferences
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="sellerType"]'), config["Preferences"]["Private & trade"])
-        self.select_drop_down_by_value(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="showWriteOff"]'), config["Preferences"]["Cat S/C/D/N"])
-        if config["Preferences"]["Nothern Ireland"] == True:
-            self.hover_and_click_element(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@id="postalRegion"]'))
-        if config["Preferences"]["Manufacturer approved"] == True:
-            self.hover_and_click_element(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@id="isManufacturerApproved"]'))
-        if config["Preferences"]["Additional ads"] == True:
-            self.hover_and_click_element(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@id="advertClassification"]'))
+        body_types = self.__generate_body_type_multichoice_argument()
+
+        if body_types:
+            search_arguments.append(body_types)
+
+        fuel_types = self.__generate_fuel_type_multichoice_argument()
+
+        if fuel_types:
+            search_arguments.append(fuel_types)
+
+        self.__append_optional_argument("maximum-mileage", config['Mileage'], search_arguments)
+        self.__append_optional_argument("transmission", config['Gearbox'], search_arguments)
+
+        if config['Age']['Select year'] == False:
+            search_arguments.append("year-from=new")
+            if config['Age']['Only new'] == True:
+                search_arguments.append("newCarHasDeal=on")
+        else:
+            self.__append_optional_argument("year-from", config['Age']['Min year'], search_arguments)
+            self.__append_optional_argument("year-to", config['Age']['Max year'], search_arguments)
         
-        # TODO: Add car type and color, this will do for now
+        colours = self.__generate_colour_type_multichoice_argument()
 
-        self.auto_trader_confirm_search_viable()
-        self.hover_and_click_element(self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="search-cars-button"]')) # Press search button
+        if colours:
+            search_arguments.append(colours)
+
+        self.__append_optional_argument("quantity-of-doors", config['Specification']['Doors'], search_arguments)
+        self.__append_optional_argument("minimum-seats", config['Specification']['Min seats'], search_arguments)
+        self.__append_optional_argument("maximum-seats", config['Specification']['Max seats'], search_arguments)
+
+        self.__append_optional_argument("minimum-badge-engine-size", config['Performance']['Min engine size'], search_arguments)
+        self.__append_optional_argument("maximum-badge-engine-size", config['Performance']['Max engine size'], search_arguments)
+
+        self.__append_optional_argument("min-engine-power", config['Performance']['Min engine power'], search_arguments)
+        self.__append_optional_argument("max-engine-power", config['Performance']['Max engine power'], search_arguments)
+
+        self.__append_optional_argument("zero-to-60", config['Performance']['Acceleration'], search_arguments)
+
+        self.__append_optional_argument("drivetrain", config['Performance']['Drivetrain'], search_arguments)
+
+        self.__append_optional_argument("annual-tax-cars", config['Running cost']['Annual tax'], search_arguments)
+        self.__append_optional_argument("insuranceGroup", config['Running cost']['Insurance group'], search_arguments)
+        self.__append_optional_argument("fuel-consumption", config['Running cost']['Fuel consumption'], search_arguments)
+        self.__append_optional_argument("co2-emissions-cars", config['Running cost']['CO2 emissions'], search_arguments)
+        if config["Running cost"]["Only ULEZ"] == True:
+            search_arguments.append("ulez-compliant=on")
+
+        self.__append_optional_argument("seller-type", config['Preferences']['Private & trade'], search_arguments)
+        self.__append_optional_argument("seller-type", config['Preferences']['Private & trade'], search_arguments)
+
+        include_write_off = config["Preferences"]["Cat S/C/D/N"]
+
+        if include_write_off != "Any":
+            if include_write_off == True:
+                search_arguments.append("only-writeoff-categories=on")
+            else:
+                search_arguments.append("exclude-writeoff-categories=on")
+
+        if config["Preferences"]["Nothern Ireland"] == True:
+            search_arguments.append("ni-only=on")
+
+        if config["Preferences"]["Manufacturer approved"] == True:
+            search_arguments.append("ma=Y")
+
+        if config["Preferences"]["Additional ads"] == True:
+            search_arguments.append("include-non-classified=on")
+
+        search_arguments.append("page=1")
+        search_url = f"{self.target_website}car-search?{'&'.join(search_arguments)}"
+        print(search_url)
+        self.driver.get(search_url)
 
     def scrape_links(self):
         maxPage = self.config["maxPage"]
