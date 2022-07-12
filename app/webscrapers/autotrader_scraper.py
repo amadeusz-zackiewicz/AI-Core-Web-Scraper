@@ -1,11 +1,8 @@
-import imp
-import math
-from xml.dom.minidom import Element
-
-from attr import attr
+from tkinter.messagebox import NO
 from .webscraper import WebScraperBase
 from time import sleep
 import re
+import urllib.request
 
 
 class AutotraderWebscraper(WebScraperBase):
@@ -258,13 +255,100 @@ class AutotraderWebscraper(WebScraperBase):
             self.go_next_page()
 
     def scrape_all_details(self):
+        f = open("data/results.csv", "w")
+        f.write(self.__get_csv_header())
+        f.write("\n")
+        f.close()
         for listing_id in self.scraped_links:
-            self.scrape_details(self.create_detail_page_address(listing_id))
+            self.scrape_details(self.create_detail_page_address(listing_id), listing_id)
 
-    def scrape_details(self, link: str):
+    def scrape_details(self, link: str, listing_id: str):
         self.driver.get(link)
         sleep(2)
-        model_make = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="advert-title"]').text
+        listing_image_url = self.driver.find_element(self.GET_TYPE_XPATH, "//img").get_attribute("src")
+        urllib.request.urlretrieve(listing_image_url, f"data/images/{listing_id}.jpeg")
+
+        title = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="advert-title"]').text
+        make, model = title.split(" ", 1)
+
         total_price = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-testid="total-price-value"]').text
         mileage = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-testid="mileage"]').text
-        print(f"{model_make} --- {total_price} --- {mileage}")
+        details_panel = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="key-specs-section"]')
+
+        type = details_panel.find_element(self.GET_TYPE_XPATH, "li[1]").text
+        engine_size = details_panel.find_element(self.GET_TYPE_XPATH, "li[2]").text
+        gearbox = details_panel.find_element(self.GET_TYPE_XPATH, "li[3]").text
+        fuel = details_panel.find_element(self.GET_TYPE_XPATH, "li[4]").text
+        doors = details_panel.find_element(self.GET_TYPE_XPATH, "li[5]").text
+        seats = details_panel.find_element(self.GET_TYPE_XPATH, "li[6]").text
+        # TODO: missing year, ULEZ, numbers of owners
+
+        f = open("data/results.csv", "a")
+        f.write(
+            self.__format_csv_line(
+                listing_id=listing_id,
+                type=type,
+                engine_size=engine_size,
+                gearbox=gearbox,
+                fuel=fuel,
+                doors=doors,
+                seats=seats,
+                make=make,
+                model=model,
+                total_price=total_price,
+                mileage=mileage
+            ))
+        f.write("\n")
+        f.close()
+
+
+    def __get_csv_header(self):
+        return ", ".join([
+            "Listing ID",
+            "Price",
+            "Type",
+            "Make", 
+            "Model",
+            "Year",
+            "Doors",
+            "Seats",
+            "Engine",
+            "Gearbox",
+            "Fuel",
+            "Mileage",
+            "Previous owners",
+            "ULEZ"
+            ])
+
+    def __format_csv_line(self,
+        listing_id = None, 
+        make = None, 
+        model = None, 
+        mileage = None, 
+        gearbox = None, 
+        fuel = None, 
+        owners = None, 
+        doors = None, 
+        seats = None, 
+        total_price = None, 
+        year = None, 
+        ulez = None, 
+        type = None, 
+        engine_size = None
+        ):
+        return ", ".join([
+            listing_id if listing_id != None else "", 
+            total_price if total_price != None else "",
+            type if type != None else "",
+            make if make != None else "", 
+            model if model != None else "", 
+            year if year != None else "", 
+            doors if doors != None else "",
+            engine_size if engine_size != None else "", 
+            seats if seats != None else "", 
+            gearbox if gearbox != None else "", 
+            fuel if fuel != None else "", 
+            mileage if mileage != None else "",
+            owners if owners != None else "", 
+            "true" if ulez != None else "false"
+            ])
