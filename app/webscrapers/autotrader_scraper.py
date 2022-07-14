@@ -1,9 +1,9 @@
-from tkinter.messagebox import NO
 from .webscraper import WebScraperBase
 from time import sleep
 import re
 import urllib.request
-
+import json
+import os
 
 class AutotraderWebscraper(WebScraperBase):
     def __init__(self, config_file_name, headless=False):
@@ -241,6 +241,7 @@ class AutotraderWebscraper(WebScraperBase):
 
     def scrape_links(self):
         maxPage = self.config["maxPage"]
+        # TODO: this is very prone to errors if changed and needs to be redone
         page = 1
         while page <= maxPage:
             listings = self.driver.find_elements_by_class_name("search-page__result")
@@ -248,32 +249,41 @@ class AutotraderWebscraper(WebScraperBase):
             for listing in listings:
                 if listing.get_attribute("data-is-promoted-listing") == None and listing.get_attribute("data-is-yaml-listing") == None:
                     listing_id = listing.get_attribute("data-advert-id")
-                    self.scraped_links.append(listing_id)
-                    print(listing_id)
+                    if not os.path.exists(f"raw_data/{listing_id}.json"):
+                        self.scraped_links.append(listing_id)
+                        print("New listing:", listing_id)
+                    else:
+                        print("Ignored:", listing_id)
 
-            page += 1
             self.go_next_page()
+            page += 1
 
     def scrape_all_details(self):
-        f = open("data/results.csv", "w")
-        f.write(self.__get_csv_header())
-        f.write("\n")
-        f.close()
+        # f = open("raw_data/results.csv", "w")
+        # f.write(self.__get_csv_header())
+        # f.write("\n")
+        # f.close()
         for listing_id in self.scraped_links:
             self.scrape_details(self.create_detail_page_address(listing_id), listing_id)
 
     def scrape_details(self, link: str, listing_id: str):
         self.driver.get(link)
         sleep(2)
-        listing_image_url = self.driver.find_element(self.GET_TYPE_XPATH, "//img").get_attribute("src")
-        urllib.request.urlretrieve(listing_image_url, f"data/images/{listing_id}.jpeg")
+        listing_image = self.driver.find_element(self.GET_TYPE_XPATH, "//img")
+        image_url = listing_image.get_attribute("src")
+        if image_url:
+            urllib.request.urlretrieve(image_url, f"raw_data/images/{listing_id}.jpeg")
+
+        data = {}
 
         title = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="advert-title"]').text
         make, model = title.split(" ", 1)
 
+
         total_price = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-testid="total-price-value"]').text
         mileage = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-testid="mileage"]').text
         details_panel = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="key-specs-section"]')
+
 
         type = details_panel.find_element(self.GET_TYPE_XPATH, "li[1]").text
         engine_size = details_panel.find_element(self.GET_TYPE_XPATH, "li[2]").text
@@ -281,26 +291,46 @@ class AutotraderWebscraper(WebScraperBase):
         fuel = details_panel.find_element(self.GET_TYPE_XPATH, "li[4]").text
         doors = details_panel.find_element(self.GET_TYPE_XPATH, "li[5]").text
         seats = details_panel.find_element(self.GET_TYPE_XPATH, "li[6]").text
+
+        data["id"] = listing_id
+        data["mileage"] = mileage.replace(",", "").replace(" miles", "").replace(" mile", "")
+        data["price"] = total_price.replace("£", "", 1).replace(",", "")
+        data["make"] = make
+        data["model"] = model
+        data["type"] = type
+        data["engine"] = engine_size
+        data["gearbox"] = gearbox
+        data["fuel"] = fuel
+        data["doors"] = doors
+        data["seats"] = seats
+
+        self.__save_data(data)
+
         # TODO: missing year, ULEZ, numbers of owners
 
-        f = open("data/results.csv", "a")
-        f.write(
-            self.__format_csv_line(
-                listing_id=listing_id,
-                type=type,
-                engine_size=engine_size,
-                gearbox=gearbox,
-                fuel=fuel,
-                doors=doors,
-                seats=seats,
-                make=make,
-                model=model,
-                total_price=total_price,
-                mileage=mileage
-            ))
-        f.write("\n")
-        f.close()
+        #f = open("raw_data/results.csv", "a")
+        # f.write(
+        #     self.__format_csv_line(
+        #         listing_id=listing_id,
+        #         type=type,
+        #         engine_size=engine_size,
+        #         gearbox=gearbox,
+        #         fuel=fuel,
+        #         doors=doors,
+        #         seats=seats,
+        #         make=make,
+        #         model=model,
+        #         total_price=total_price,
+        #         mileage=mileage
+        #     ))
+        # f.write("\n")
+        # f.close()
 
+
+    def __save_data(self, data: dict):
+        f = open(f"raw_data/{data['id']}.json", "w")
+        json.dump(data, f, indent=4)
+        f.close()
 
     def __get_csv_header(self):
         return ", ".join([
