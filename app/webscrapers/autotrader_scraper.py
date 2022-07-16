@@ -29,28 +29,28 @@ class AutotraderWebscraper(WebScraperBase):
         self.driver.switch_to.frame(cookie_holder)
         super().accept_cookies()
     
-    def go_to_advanced_search(self):
+    def __go_to_advanced_search(self):
         element = self.driver.find_element(self.GET_TYPE_CLASS, "atds-hero__more-options")
         element.click()
         sleep(5)
 
-    def auto_trader_click_wide_toggle(self, parent_element, test_id: str):
+    def __auto_trader_click_wide_toggle(self, parent_element, test_id: str):
         sub_element = parent_element.find_element(self.GET_TYPE_XPATH, f'//*[@data-testid="{test_id}-toggle"]')
-        if self.auto_trader_is_wide_button_active(sub_element) == False:
+        if self.__auto_trader_is_wide_button_active(sub_element) == False:
             raise Exception(f'A button "{test_id}" was disabled, indicating that your search is too narrow.')
         self.hover_and_click_element(sub_element)
-        self.auto_trader_confirm_search_viable()
+        self.__auto_trader_confirm_search_viable()
 
-    def auto_trader_add_keywords(self, keywords):
+    def __auto_trader_add_keywords(self, keywords):
         keywords_input = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@id="keywords"]')
         keywords_panel = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="field-panel"]')
 
         for keyword in keywords:
             self.input_text(keywords_input, keyword)
             keywords_panel.find_element(self.GET_TYPE_XPATH, '//*[text()="Add"]').click()
-            self.auto_trader_confirm_search_viable()
+            self.__auto_trader_confirm_search_viable()
 
-    def auto_trader_confirm_search_viable(self):
+    def __auto_trader_confirm_search_viable(self):
         if self.config["earlyAbortSearch"] == True:
             sleep(1)
             element = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="search-cars-button"]')
@@ -62,7 +62,7 @@ class AutotraderWebscraper(WebScraperBase):
             
     def hover_and_click_element(self, element):
         super().hover_and_click_element(element)
-        self.auto_trader_confirm_search_viable()
+        self.__auto_trader_confirm_search_viable()
 
     def select_drop_down_by_value(self, element, target):
         if target == "Any":
@@ -70,14 +70,14 @@ class AutotraderWebscraper(WebScraperBase):
         
         super().select_drop_down_by_value(element, target)
 
-        self.auto_trader_confirm_search_viable()
+        self.__auto_trader_confirm_search_viable()
 
     def input_text(self, element, text):
         super().input_text(element, text)
 
-        self.auto_trader_confirm_search_viable()
+        self.__auto_trader_confirm_search_viable()
 
-    def auto_trader_is_wide_button_active(self, element):
+    def __auto_trader_is_wide_button_active(self, element):
         sleep(1)
         hidden_element = element.find_element(self.GET_TYPE_XPATH, "../input")
         return hidden_element.get_attribute("disabled") == None
