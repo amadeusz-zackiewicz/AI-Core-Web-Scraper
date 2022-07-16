@@ -164,7 +164,7 @@ class AutotraderWebscraper(WebScraperBase):
                 keywords.append("wheelchair")
 
         if len(keywords) > 0:
-            arguments.append(self.__join_multi_arguments(keywords))
+            arguments.append(self.__join_multi_arguments("keywords", keywords))
 
     def __append_arguments_body_type(self, config: dict, arguments):
         body_types = self.__generate_body_type_multichoice_argument()
@@ -312,7 +312,7 @@ class AutotraderWebscraper(WebScraperBase):
 
         total_price = self.get_text_by_xpath('//*[@data-testid="total-price-value"]')
         mileage = self.get_text_by_xpath('//*[@data-testid="mileage"]')
-        details_panel = self.get_text_by_xpath('//*[@data-gui="key-specs-section"]')
+        details_panel = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="key-specs-section"]')
 
         type = self.get_text_by_xpath("li[1]", details_panel)
         engine_size = self.get_text_by_xpath("li[2]", details_panel)

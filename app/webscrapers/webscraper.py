@@ -92,7 +92,7 @@ class WebScraperBase:
         element.send_keys(text)
 
     def scrape_image(self, file_name: str, img_url: str):
-        import urllib
+        import urllib.request
         urllib.request.urlretrieve(img_url, f"raw_data/images/{file_name}.jpeg")
 
     def get_text_by_xpath(self, xpath: str, parent_element = None):
