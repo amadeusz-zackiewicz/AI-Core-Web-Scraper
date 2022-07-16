@@ -1,7 +1,6 @@
 from .webscraper import WebScraperBase
 from time import sleep
 import re
-import urllib.request
 import json
 import os
 
@@ -100,7 +99,7 @@ class AutotraderWebscraper(WebScraperBase):
         if len(types) == 0:
             return None
         else:
-            return f"{argument_name}={'%2C'.join(types)}"
+            return self.__join_multi_arguments(argument_name, types)
 
     def __generate_body_type_multichoice_argument(self) -> str or None:
         return self.__generate_multichoice_argument(self.config['search']['Body type'], 'body-type')
@@ -127,112 +126,142 @@ class AutotraderWebscraper(WebScraperBase):
         else:
             return False
 
-    def search(self):
-
-        search_arguments = []
-        config = self.config["search"]
-
-        search_arguments.append(f"postcode={config['Postcode']}")
+    def __append_arguments_postcode_distance(self, config: dict, arguments):
+        arguments.append(f"postcode={config['Postcode']}")
         if config['Distance'] != 'National':
-            search_arguments.append(f"radius={config['Distance']}")
+            arguments.append(f"radius={config['Distance']}")
 
-        if self.__append_optional_argument("make", config['Make'], search_arguments):
-            if self.__append_optional_argument("model", config['Model'], search_arguments):
-                self.__append_optional_argument("aggregatedTrim", config['Model variant'], search_arguments)
+    def __append_arguments_make_model(self, config, arguments):
+        if self.__append_optional_argument("make", config['Make'], arguments):
+            if self.__append_optional_argument("model", config['Model'], arguments):
+                self.__append_optional_argument("aggregatedTrim", config['Model variant'], arguments)
 
-
+    def __append_arguments_finance(self, config: dict, arguments):
         if config['Buying with'] == "Finance":
-            self.__append_optional_argument("min-monthly-price", config['Min price'], search_arguments)
-            self.__append_optional_argument("max-monthly-price", config['Max price'], search_arguments)
-            search_arguments.append(f"deposit={config['Finance']['Deposit']}")
-            search_arguments.append(f"term={config['Finance']['Term']}")
-            search_arguments.append(f"yearly-mileage={config['Finance']['Mileage']}")
+            self.__append_optional_argument("min-monthly-price", config['Min price'], arguments)
+            self.__append_optional_argument("max-monthly-price", config['Max price'], arguments)
+            arguments.append(f"deposit={config['Finance']['Deposit']}")
+            arguments.append(f"term={config['Finance']['Term']}")
+            arguments.append(f"yearly-mileage={config['Finance']['Mileage']}")
         else:
-            self.__append_optional_argument("price-from", config['Min price'], search_arguments)
-            self.__append_optional_argument("price-to", config['Max price'], search_arguments)
+            self.__append_optional_argument("price-from", config['Min price'], arguments)
+            self.__append_optional_argument("price-to", config['Max price'], arguments)
 
+    def __append_arguments_remote_options(self, config: dict, arguments):
         if config['Remote options']['Home delivery'] == True:
-            search_arguments.append("only-delivery-option=on")
+            arguments.append("only-delivery-option=on")
         else:
-            search_arguments.append("include-delivery-option=on")
+            arguments.append("include-delivery-option=on")
 
         if config['Remote options']['Click & collect'] == True:
-            search_arguments.append("click-and-collect-available=on")
+            arguments.append("click-and-collect-available=on")
 
+
+    def __append_arguments_keywords(self, config: dict, arguments):
         keywords = config['Keywords']
 
         if not "wheelchair" in keywords and config['WAV'] == True:
                 keywords.append("wheelchair")
 
         if len(keywords) > 0:
-            search_arguments.append(f"keywords={'%2C'.join(keywords)}")
+            arguments.append(self.__join_multi_arguments(keywords))
 
+    def __append_arguments_body_type(self, config: dict, arguments):
         body_types = self.__generate_body_type_multichoice_argument()
 
         if body_types:
-            search_arguments.append(body_types)
+            arguments.append(body_types)
 
+    def __append_arguments_mileage_gearbox(self, config: dict, arguments):
+        self.__append_optional_argument("maximum-mileage", config['Mileage'], arguments)
+        self.__append_optional_argument("transmission", config['Gearbox'], arguments)
+
+    def __append_arguments_fuel_type(self, config: dict, arguments):
         fuel_types = self.__generate_fuel_type_multichoice_argument()
 
         if fuel_types:
-            search_arguments.append(fuel_types)
+            arguments.append(fuel_types)
 
-        self.__append_optional_argument("maximum-mileage", config['Mileage'], search_arguments)
-        self.__append_optional_argument("transmission", config['Gearbox'], search_arguments)
-
+    def __append_arguments_age(self, config: dict, arguments):
         if config['Age']['Select year'] == False:
-            search_arguments.append("year-from=new")
+            arguments.append("year-from=new")
             if config['Age']['Only new'] == True:
-                search_arguments.append("newCarHasDeal=on")
+                arguments.append("newCarHasDeal=on")
         else:
-            self.__append_optional_argument("year-from", config['Age']['Min year'], search_arguments)
-            self.__append_optional_argument("year-to", config['Age']['Max year'], search_arguments)
-        
+            self.__append_optional_argument("year-from", config['Age']['Min year'], arguments)
+            self.__append_optional_argument("year-to", config['Age']['Max year'], arguments)
+
+    def __append_arguments_colour(self, config: dict, arguments):
         colours = self.__generate_colour_type_multichoice_argument()
 
         if colours:
-            search_arguments.append(colours)
+            arguments.append(colours)
 
-        self.__append_optional_argument("quantity-of-doors", config['Specification']['Doors'], search_arguments)
-        self.__append_optional_argument("minimum-seats", config['Specification']['Min seats'], search_arguments)
-        self.__append_optional_argument("maximum-seats", config['Specification']['Max seats'], search_arguments)
+    def __append_arguments_doors_seats(self, config: dict, arguments):
+        self.__append_optional_argument("quantity-of-doors", config['Specification']['Doors'], arguments)
+        self.__append_optional_argument("minimum-seats", config['Specification']['Min seats'], arguments)
+        self.__append_optional_argument("maximum-seats", config['Specification']['Max seats'], arguments)
 
-        self.__append_optional_argument("minimum-badge-engine-size", config['Performance']['Min engine size'], search_arguments)
-        self.__append_optional_argument("maximum-badge-engine-size", config['Performance']['Max engine size'], search_arguments)
+    def __append_arguments_performance(self, config: dict, arguments):
+        self.__append_optional_argument("minimum-badge-engine-size", config['Performance']['Min engine size'], arguments)
+        self.__append_optional_argument("maximum-badge-engine-size", config['Performance']['Max engine size'], arguments)
+        self.__append_optional_argument("min-engine-power", config['Performance']['Min engine power'], arguments)
+        self.__append_optional_argument("max-engine-power", config['Performance']['Max engine power'], arguments)
+        self.__append_optional_argument("zero-to-60", config['Performance']['Acceleration'], arguments)
+        self.__append_optional_argument("drivetrain", config['Performance']['Drivetrain'], arguments)
 
-        self.__append_optional_argument("min-engine-power", config['Performance']['Min engine power'], search_arguments)
-        self.__append_optional_argument("max-engine-power", config['Performance']['Max engine power'], search_arguments)
-
-        self.__append_optional_argument("zero-to-60", config['Performance']['Acceleration'], search_arguments)
-
-        self.__append_optional_argument("drivetrain", config['Performance']['Drivetrain'], search_arguments)
-
-        self.__append_optional_argument("annual-tax-cars", config['Running cost']['Annual tax'], search_arguments)
-        self.__append_optional_argument("insuranceGroup", config['Running cost']['Insurance group'], search_arguments)
-        self.__append_optional_argument("fuel-consumption", config['Running cost']['Fuel consumption'], search_arguments)
-        self.__append_optional_argument("co2-emissions-cars", config['Running cost']['CO2 emissions'], search_arguments)
+    def __append_arguments_running_cost(self, config: dict, arguments):
+        self.__append_optional_argument("annual-tax-cars", config['Running cost']['Annual tax'], arguments)
+        self.__append_optional_argument("insuranceGroup", config['Running cost']['Insurance group'], arguments)
+        self.__append_optional_argument("fuel-consumption", config['Running cost']['Fuel consumption'], arguments)
+        self.__append_optional_argument("co2-emissions-cars", config['Running cost']['CO2 emissions'], arguments)
         if config["Running cost"]["Only ULEZ"] == True:
-            search_arguments.append("ulez-compliant=on")
+            arguments.append("ulez-compliant=on")
 
-        self.__append_optional_argument("seller-type", config['Preferences']['Private & trade'], search_arguments)
-        self.__append_optional_argument("seller-type", config['Preferences']['Private & trade'], search_arguments)
+    def __append_arguments_preferences(self, config: dict, arguments):
+        self.__append_optional_argument("seller-type", config['Preferences']['Private & trade'], arguments)
+        self.__append_optional_argument("seller-type", config['Preferences']['Private & trade'], arguments)
 
         include_write_off = config["Preferences"]["Cat S/C/D/N"]
 
         if include_write_off != "Any":
             if include_write_off == True:
-                search_arguments.append("only-writeoff-categories=on")
+                arguments.append("only-writeoff-categories=on")
             else:
-                search_arguments.append("exclude-writeoff-categories=on")
+                arguments.append("exclude-writeoff-categories=on")
 
         if config["Preferences"]["Nothern Ireland"] == True:
-            search_arguments.append("ni-only=on")
+            arguments.append("ni-only=on")
 
         if config["Preferences"]["Manufacturer approved"] == True:
-            search_arguments.append("ma=Y")
+            arguments.append("ma=Y")
 
         if config["Preferences"]["Additional ads"] == True:
-            search_arguments.append("include-non-classified=on")
+            arguments.append("include-non-classified=on")
+
+    def __join_multi_arguments(self, argument_name: str,arguments: list):
+        return f"{argument_name}={'%2C'.join(arguments)}"
+
+    def search(self, config = None):
+
+        search_arguments = []
+        if config == None:
+            config = self.config["search"]
+
+        self.__append_arguments_postcode_distance(config, search_arguments)
+        self.__append_arguments_make_model(config, search_arguments)
+        self.__append_arguments_finance(config, search_arguments)
+        self.__append_arguments_remote_options(config, search_arguments)
+        self.__append_arguments_keywords(config, search_arguments)
+        self.__append_arguments_body_type(config, search_arguments)
+        self.__append_arguments_fuel_type(config, search_arguments)
+        self.__append_arguments_mileage_gearbox(config, search_arguments)
+        self.__append_arguments_age(config, search_arguments)
+        self.__append_arguments_colour(config, search_arguments)
+        self.__append_arguments_doors_seats(config, search_arguments)
+        self.__append_arguments_performance(config, search_arguments)
+        self.__append_arguments_running_cost(config, search_arguments)
+        self.__append_arguments_preferences(config, search_arguments)
 
         search_arguments.append("page=1")
         search_url = f"{self.target_website}car-search?{'&'.join(search_arguments)}"
@@ -266,35 +295,35 @@ class AutotraderWebscraper(WebScraperBase):
         for listing_id in self.scraped_links:
             self.scrape_details(self.create_detail_page_address(listing_id), listing_id)
 
+
     def scrape_details(self, link: str, listing_id: str):
         self.driver.get(link)
         sleep(2)
         listing_image = self.driver.find_element(self.GET_TYPE_XPATH, "//img")
         image_url = listing_image.get_attribute("src")
         if image_url:
-            urllib.request.urlretrieve(image_url, f"raw_data/images/{listing_id}.jpeg")
+            self.scrape_image(listing_id, image_url)
 
         data = {}
 
-        title = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="advert-title"]').text
+        title = self.get_text_by_xpath('//*[@data-gui="advert-title"]')
         make, model = title.split(" ", 1)
 
 
-        total_price = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-testid="total-price-value"]').text
-        mileage = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-testid="mileage"]').text
-        details_panel = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="key-specs-section"]')
+        total_price = self.get_text_by_xpath('//*[@data-testid="total-price-value"]')
+        mileage = self.get_text_by_xpath('//*[@data-testid="mileage"]')
+        details_panel = self.get_text_by_xpath('//*[@data-gui="key-specs-section"]')
 
-
-        type = details_panel.find_element(self.GET_TYPE_XPATH, "li[1]").text
-        engine_size = details_panel.find_element(self.GET_TYPE_XPATH, "li[2]").text
-        gearbox = details_panel.find_element(self.GET_TYPE_XPATH, "li[3]").text
-        fuel = details_panel.find_element(self.GET_TYPE_XPATH, "li[4]").text
-        doors = details_panel.find_element(self.GET_TYPE_XPATH, "li[5]").text
-        seats = details_panel.find_element(self.GET_TYPE_XPATH, "li[6]").text
+        type = self.get_text_by_xpath("li[1]", details_panel)
+        engine_size = self.get_text_by_xpath("li[2]", details_panel)
+        gearbox = self.get_text_by_xpath("li[3]", details_panel)
+        fuel = self.get_text_by_xpath("li[4]", details_panel)
+        doors = self.get_text_by_xpath("li[5]", details_panel)
+        seats = self.get_text_by_xpath("li[6]", details_panel)
 
         data["id"] = listing_id
         data["mileage"] = mileage.replace(",", "").replace(" miles", "").replace(" mile", "")
-        data["price"] = total_price.replace("£", "", 1).replace(",", "")
+        data["price"] = self.format_currency_to_raw_number("£", total_price)
         data["make"] = make
         data["model"] = model
         data["type"] = type
