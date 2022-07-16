@@ -91,6 +91,19 @@ class WebScraperBase:
         element.click()
         element.send_keys(text)
 
+    def scrape_image(self, file_name: str, img_url: str):
+        import urllib
+        urllib.request.urlretrieve(img_url, f"raw_data/images/{file_name}.jpeg")
+
+    def get_text_by_xpath(self, xpath: str, parent_element = None):
+        if parent_element == None:
+            return self.driver.find_element(self.GET_TYPE_XPATH, xpath).text
+        else:
+            return parent_element.find_element(self.GET_TYPE_XPATH, xpath).text
+
+    def format_currency_to_raw_number(self, currency: str, input: str):
+        return input.replace(currency, "").replace(",", "")
+
     def check_for_cookie_prompt(self, return_element=False) -> bool:
         for getter in self.cookie_prompt_getters:
             try:
