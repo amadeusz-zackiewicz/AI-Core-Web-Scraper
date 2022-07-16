@@ -69,6 +69,7 @@ class WebScraperBase:
         
 
     def go_to_home(self):
+        """Navigates to the main page of the website"""
         self.driver.get(self.target_website)
         sleep(2)
 
@@ -88,23 +89,28 @@ class WebScraperBase:
         return f'{self.target_website}car-details/{scraped_link}'
 
     def input_text(self, element, text):
+        """Simulates user input of specified keys on the element"""
         element.click()
         element.send_keys(text)
 
     def scrape_image(self, file_name: str, img_url: str):
+        """Downloads image from the specified URL and saves it into raw_data/images/"""
         import urllib.request
         urllib.request.urlretrieve(img_url, f"raw_data/images/{file_name}.jpeg")
 
     def get_text_by_xpath(self, xpath: str, parent_element = None):
+        """Convienience function to get xpaths faster"""
         if parent_element == None:
             return self.driver.find_element(self.GET_TYPE_XPATH, xpath).text
         else:
             return parent_element.find_element(self.GET_TYPE_XPATH, xpath).text
 
     def format_currency_to_raw_number(self, currency: str, input: str):
+        """Convienience function to remove currency symbols and commas from a number"""
         return input.replace(currency, "").replace(",", "")
 
     def check_for_cookie_prompt(self, return_element=False) -> bool:
+        """Attempt to get element which hold the cookie prompt, it simply loops through all the self.cookie_promp_getters until it finds one or faills all of them"""
         for getter in self.cookie_prompt_getters:
             try:
                 element = self.driver.find_element(*getter)
@@ -122,6 +128,7 @@ class WebScraperBase:
             return False
 
     def accept_cookies(self):
+        """Accept cookies by clicking on the 'Accept All' button, the button path is configured by adding self.cookie_accept_button_getters"""
         for getter in self.cookie_accept_button_getters:
             try:
                 element = self.driver.find_element(*getter)
@@ -136,6 +143,7 @@ class WebScraperBase:
         return FailedToFindButtonToAcceptCookiesException()
 
     def select_drop_down_by_value(self, element, target):
+        """Simulates user clicking on the drop down menu and its element"""
         element.click()
         selection = Select(element)
         selection.select_by_value(target)
@@ -143,6 +151,7 @@ class WebScraperBase:
         selection.first_selected_option.click()
 
     def hover_and_click_element(self, element):
+        """Simulates user moving the mouse over the element and clicking it"""
         action = ActionChains(self.driver)
         self.driver.execute_script("arguments[0].scrollIntoView();", element)
         action.move_to_element_with_offset(element, 3, 3)
@@ -151,4 +160,5 @@ class WebScraperBase:
 
 
     def close(self):
+        """Closes the web driver and cleans up"""
         self.driver.close()

@@ -83,6 +83,7 @@ class AutotraderWebscraper(WebScraperBase):
         return hidden_element.get_attribute("disabled") == None
 
     def go_next_page(self):
+        """Replaces the current page number in the URL and navigates to it"""
         url = self.driver.current_url
         match = re.search('page=[0-9]*', url)
         page_number = int(match.group().replace("page=", ""))
@@ -243,7 +244,7 @@ class AutotraderWebscraper(WebScraperBase):
         return f"{argument_name}={'%2C'.join(arguments)}"
 
     def search(self, config = None):
-
+        """Generates the search URL and navigates to the first page"""
         search_arguments = []
         if config == None:
             config = self.config["search"]
@@ -269,6 +270,10 @@ class AutotraderWebscraper(WebScraperBase):
         self.driver.get(search_url)
 
     def scrape_links(self):
+        """
+        Gets all the listing IDs from the current page and navigates to the next one, page amount can be specified in the config file.
+        Any duplicate IDs will be ignored
+        """
         maxPage = self.config["maxPage"]
         # TODO: this is very prone to errors if changed and needs to be redone
         page = 1
@@ -288,6 +293,7 @@ class AutotraderWebscraper(WebScraperBase):
             page += 1
 
     def scrape_all_details(self):
+        """Loops through all the listing IDs and gets the neccessary data"""
         # f = open("raw_data/results.csv", "w")
         # f.write(self.__get_csv_header())
         # f.write("\n")
@@ -297,6 +303,7 @@ class AutotraderWebscraper(WebScraperBase):
 
 
     def scrape_details(self, link: str, listing_id: str):
+        """Gets all the data from the current listing and saves it into a file"""
         self.driver.get(link)
         sleep(2)
         listing_image = self.driver.find_element(self.GET_TYPE_XPATH, "//img")
