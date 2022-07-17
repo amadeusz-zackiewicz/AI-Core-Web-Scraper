@@ -12,4 +12,11 @@ Instead of creating a whole algorithm for clicking and selecting options, I coul
 I have decided to refactor the search method to generate a URL instead of navigating to the advanced search page and simulating user input. This has reduced the amount of time the scraper spends getting the results significantly. 
 
 ## Milestone 3
-I have created a folder where the data is going to be stored and prepared a function to save the data into a .json file. Then I started to scrape all the listing IDs from the search results, in this case all I had to to was to get a single attribute, and detecting if the listing was an advert, required me to check if it had a specific attribute attached. Every ID is being checked to prevent rescraping the same data by checking if a file for it already exists. Using urllib I'm also downloading the main image that is displayed for each listing and saving them in images folder.
+I have created a folder where the data is going to be stored and prepared a function to save the data into a .json file. Then I started to scrape all the listing IDs from the search results, in this case all I had to to was to get a single attribute, and detecting if the listing was an advert, required me to check if it had a specific attribute attached. 
+
+Every ID is being checked to prevent rescraping the same data by checking if a file for it already exists. Using urllib I'm also downloading the main image that is displayed for each listing and saving them in images folder.
+
+## Milestone 4
+I have made the scrapers more test friendly by making it possible to provide custom config file and change the directory where the data is scraped. 
+
+I have also added unit tests for the Autotrader scraper, to run the tests you can run the 'test_all.sh' file from the terminal.
