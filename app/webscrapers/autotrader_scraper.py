@@ -5,8 +5,8 @@ import json
 import os
 
 class AutotraderWebscraper(WebScraperBase):
-    def __init__(self, config_file_name, headless=False):
-        super().__init__(config_file_name, headless)
+    def __init__(self, config_file_name="", headless=False, driver=None, config=None, data_folder="raw_data/"):
+        super().__init__(config_file_name, headless, driver, config, data_folder)
         
         self.target_website = "https://www.autotrader.co.uk/"
 
@@ -283,7 +283,7 @@ class AutotraderWebscraper(WebScraperBase):
             for listing in listings:
                 if listing.get_attribute("data-is-promoted-listing") == None and listing.get_attribute("data-is-yaml-listing") == None:
                     listing_id = listing.get_attribute("data-advert-id")
-                    if not os.path.exists(f"raw_data/{listing_id}.json"):
+                    if not os.path.exists(f"{self.data_folder}/{listing_id}.json"):
                         self.scraped_links.append(listing_id)
                         print("New listing:", listing_id)
                     else:
@@ -294,7 +294,7 @@ class AutotraderWebscraper(WebScraperBase):
 
     def scrape_all_details(self):
         """Loops through all the listing IDs and gets the neccessary data"""
-        # f = open("raw_data/results.csv", "w")
+        # f = open("{self.data_folder}/results.csv", "w")
         # f.write(self.__get_csv_header())
         # f.write("\n")
         # f.close()
@@ -344,7 +344,7 @@ class AutotraderWebscraper(WebScraperBase):
 
         # TODO: missing year, ULEZ, numbers of owners
 
-        #f = open("raw_data/results.csv", "a")
+        #f = open("{self.data_folder}/results.csv", "a")
         # f.write(
         #     self.__format_csv_line(
         #         listing_id=listing_id,
@@ -364,7 +364,7 @@ class AutotraderWebscraper(WebScraperBase):
 
 
     def __save_data(self, data: dict):
-        f = open(f"raw_data/{data['id']}.json", "w")
+        f = open(f"{self.data_folder}/{data['id']}.json", "w")
         json.dump(data, f, indent=4)
         f.close()
 

@@ -8,6 +8,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from time import sleep
 import json
+import os
 
 class NotImplementedException(Exception):
     def __init__(self, funcName: str) -> None:
@@ -24,34 +25,36 @@ class FailedToLoadConfigFileException(Exception):
     pass
 
 class WebScraperBase:
-    def __init__(self, config_file_name, headless=False):
+    def __init__(self, config_file_name="", headless=False, driver=None, config=None, data_folder="raw_data/"):
 
-        options = webdriver.FirefoxOptions()
-        #options.add_argument("--shm-size 2g") # put this in again in case of docker problems
+        if driver == None:
+            options = webdriver.FirefoxOptions()
+            #options.add_argument("--shm-size 2g") # put this in again in case of docker problems
+            if headless:
+                options.add_argument("--headless")
 
-        if headless:
-            options.add_argument("--headless")
 
+            self.driver = webdriver.Firefox(options=options)
+            self.driver.implicitly_wait(1)
+            if not headless:
+                self.driver.maximize_window()
 
-        config_file = open(f"app/config/{config_file_name}.json")
-        self.config = json.load(config_file)
-        config_file.close()
+        if config == None:
+            config_file = open(f"app/config/{config_file_name}.json")
+            self.config = json.load(config_file)
+            config_file.close()
+        else:
+            self.config = config
 
         if self.config == None:
             raise FailedToLoadConfigFileException(config_file_name)
 
-        profile = FirefoxProfile()
-        profile.set_preference("htpp.response.timeout", 30)
-        profile.set_preference("dom.max_script_run_time", 30)
-
-        self.driver = webdriver.Firefox(firefox_profile=profile, options=options, service_log_path="log.txt")
-        self.driver.implicitly_wait(1)
-        if not headless:
-            self.driver.maximize_window()
-
-        self.config_path = ""
         self.target_website = ""
         self.scraped_links = []
+        self.data_folder = data_folder
+
+        os.makedirs(self.data_folder, exist_ok=True)
+        os.makedirs(f"{self.data_folder}{os.path.sep}images/", exist_ok=True)
 
         self.GET_TYPE_CSS = By.CSS_SELECTOR
         self.GET_TYPE_CLASS = By.CLASS_NAME
