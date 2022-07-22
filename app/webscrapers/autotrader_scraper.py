@@ -326,29 +326,47 @@ class AutotraderWebscraper(WebScraperBase):
         title = self.get_text_by_xpath('//*[@data-gui="advert-title"]')
         make, model = title.split(" ", 1)
 
+        try:
+            year = self.driver.find_element_by_xpath("/html/body/div[2]/main/div/div[2]/aside/section[2]/p[1]").text
+        except:
+            year = self.driver.find_element_by_xpath("/html/body/div[2]/main/div/div[1]/aside/section[2]/p[1]").text
 
         total_price = self.get_text_by_xpath('//*[@data-testid="total-price-value"]')
         mileage = self.get_text_by_xpath('//*[@data-testid="mileage"]')
         details_panel = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="key-specs-section"]')
 
-        type = self.get_text_by_xpath("li[1]", details_panel)
-        engine_size = self.get_text_by_xpath("li[2]", details_panel)
-        gearbox = self.get_text_by_xpath("li[3]", details_panel)
-        fuel = self.get_text_by_xpath("li[4]", details_panel)
-        doors = self.get_text_by_xpath("li[5]", details_panel)
-        seats = self.get_text_by_xpath("li[6]", details_panel)
+        details = details_panel.find_elements_by_xpath("li")
+        type = details[0].text
+        engine_size = details[1].text
+        gearbox = details[2].text
+        fuel = details[3].text
+        doors = details[4].text
+        seats = details[5].text
+
+        ulez = False
+        number_of_owners = 0
+
+        for det in details:
+            txt = det.text
+            if re.search("ULEZ", txt) != None:
+                ulez = True
+            if re.search("( owners)|( owner)", txt) != None:
+                number_of_owners = int(txt.replace(re.search("(owners)|(owner)", txt).group(), ""))
 
         data["id"] = listing_id
-        data["mileage"] = mileage.replace(",", "").replace(" miles", "").replace(" mile", "")
-        data["price"] = self.format_currency_to_raw_number("£", total_price)
+        data["mileage"] = int(mileage.replace(",", "").replace(" miles", "").replace(" mile", ""))
+        data["price"] = float(self.format_currency_to_raw_number("£", total_price))
+        data["year"] = int(year.replace(re.search(" \(.*\)$", year).group(), "") if re.search(" \(.*\)$", year).group() != None else year)
         data["make"] = make
         data["model"] = model
         data["type"] = type
-        data["engine"] = engine_size
+        data["engine"] = float(engine_size.replace("L", ""))
         data["gearbox"] = gearbox
         data["fuel"] = fuel
-        data["doors"] = doors
-        data["seats"] = seats
+        data["doors"] = int(doors.replace(" door", "").replace("s", ""))
+        data["seats"] = int(seats.replace(" seat", "").replace("s", ""))
+        data["ulez"] = ulez
+        data["owners"] = number_of_owners
 
         self.__save_data(data)
 
