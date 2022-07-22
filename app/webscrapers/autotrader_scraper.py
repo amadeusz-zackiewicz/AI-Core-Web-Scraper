@@ -3,10 +3,12 @@ from time import sleep
 import re
 import json
 import os
+import io
+import base64
 
 class AutotraderWebscraper(WebScraperBase):
-    def __init__(self, config_file_name="", headless=False, driver=None, config=None, data_folder="raw_data/", image_folder="images/"):
-        super().__init__(config_file_name, headless, driver, config, data_folder, image_folder)
+    def __init__(self, config_file_name="", headless=False, driver=None, config=None, data_folder="raw_data/", image_folder="images/", s3_bucket=None, s3_region="us-east-1"):
+        super().__init__(config_file_name, headless, driver, config, data_folder, image_folder, s3_bucket=s3_bucket, s3_region=s3_region)
         
         self.target_website = "https://www.autotrader.co.uk/"
 
@@ -285,11 +287,18 @@ class AutotraderWebscraper(WebScraperBase):
             for listing in listings:
                 if listing.get_attribute("data-is-promoted-listing") == None and listing.get_attribute("data-is-yaml-listing") == None:
                     listing_id = listing.get_attribute("data-advert-id")
-                    if not os.path.exists(f"{self.data_folder}/{listing_id}.json"):
-                        self.scraped_links.append(listing_id)
-                        print("New listing:", listing_id)
+                    if self.s3_client == None:
+                        if not os.path.exists(f"{self.data_folder}/{listing_id}.json"):
+                            self.scraped_links.append(listing_id)
+                            print("New listing:", listing_id)
+                        else:
+                            print("Ignored:", listing_id)
                     else:
-                        print("Ignored:", listing_id)
+                        if not self.s3_client.file_exists(f"{self.data_folder}/{listing_id}"):
+                            self.scraped_links.append(listing_id)
+                            print("New listing:", listing_id)
+                        else:
+                            print("Ignored:", listing_id)
 
             page += 1
 
@@ -365,9 +374,16 @@ class AutotraderWebscraper(WebScraperBase):
 
 
     def __save_data(self, data: dict):
-        f = open(f"{self.data_folder}/{data['id']}.json", "w")
-        json.dump(data, f, indent=4)
-        f.close()
+        if self.s3_client == None:
+            f = open(f"{self.data_folder}/{data['id']}.json", "w")
+            json.dump(data, f, indent=4)
+            f.close()
+        else:
+            dump = json.dumps(data, indent=4).encode("utf-8")
+            f = io.BytesIO(dump)
+            #f.write(dump)
+            self.s3_client.upload_data(f"{self.data_folder}{data['id']}", f)
+            f.close()
 
     def __get_csv_header(self):
         return ", ".join([

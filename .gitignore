@@ -3,3 +3,4 @@
 **/log.txt
 *.code-workspace
 /raw_data
+__ignore*.sh

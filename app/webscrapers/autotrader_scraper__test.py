@@ -71,7 +71,7 @@ class AutotraderTester(unittest.TestCase):
         try:
             self.__clear_tmp()
             self.__create_tmp()
-            scraper = AutotraderWebscraper("autotrader_default", headless=True, data_folder="tmp/")
+            scraper = AutotraderWebscraper("autotrader_default", headless=True, data_folder="tmp/", image_folder="tmp/images/")
             scraper.search()
             scraper.scrape_links()
             assert(len(scraper.scraped_links) != 0)
@@ -86,7 +86,7 @@ class AutotraderTester(unittest.TestCase):
         try:
             self.__clear_tmp()
             self.__create_tmp()
-            scraper = AutotraderWebscraper("autotrader_default", headless=True, data_folder="tmp/")
+            scraper = AutotraderWebscraper("autotrader_default", headless=True, data_folder="tmp/", image_folder="tmp/images/")
             scraper.search()
             scraper.scrape_links()
             scraper.scrape_all_details()

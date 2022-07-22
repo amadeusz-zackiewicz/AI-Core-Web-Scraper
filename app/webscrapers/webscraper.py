@@ -1,12 +1,9 @@
-from email import header
-from xml.dom.minidom import Element
 from selenium import webdriver
-from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from time import sleep
+from app.aws.s3 import S3Client
 import json
 import os
 
@@ -25,7 +22,7 @@ class FailedToLoadConfigFileException(Exception):
     pass
 
 class WebScraperBase:
-    def __init__(self, config_file_name="", headless=False, driver=None, config=None, data_folder="raw_data/", image_folder="images/"):
+    def __init__(self, config_file_name="", headless=False, driver=None, config=None, data_folder="raw_data/", image_folder="images/", s3_bucket=None, s3_region="us-east-1"):
 
         if driver == None:
             options = webdriver.FirefoxOptions()
@@ -54,8 +51,14 @@ class WebScraperBase:
         self.data_folder = data_folder
         self.image_folder = image_folder
 
-        os.makedirs(self.data_folder, exist_ok=True)
-        os.makedirs(f"{self.data_folder}{os.path.sep}images/", exist_ok=True)
+        if s3_bucket == None or s3_bucket == "":
+            self.s3_client = None
+            os.makedirs(self.data_folder, exist_ok=True)
+            os.makedirs(self.image_folder, exist_ok=True)
+            print("No S3 bucket specified, using local storage")
+        else:
+            self.s3_client = S3Client(bucket_name=s3_bucket, region=s3_region)
+            print(f"Using S3 bucket '{self.s3_client.bucket}' in region '{self.s3_client.bucket_region}'")
 
         self.GET_TYPE_CSS = By.CSS_SELECTOR
         self.GET_TYPE_CLASS = By.CLASS_NAME
@@ -101,9 +104,13 @@ class WebScraperBase:
         element.send_keys(text)
 
     def scrape_image(self, file_name: str, img_url: str):
-        """Downloads image from the specified URL and saves it into raw_data/images/"""
+        """Downloads image from the specified URL"""
         import urllib.request
-        urllib.request.urlretrieve(img_url, f"raw_data/images/{file_name}.jpeg")
+        if self.s3_client == None:
+            urllib.request.urlretrieve(img_url, f"{self.image_folder}{file_name}.jpeg")
+        else:
+            #print(urllib.request.urlopen(img_url))
+            pass
 
     def get_text_by_xpath(self, xpath: str, parent_element = None):
         """Convienience function to get xpaths faster"""
@@ -169,3 +176,5 @@ class WebScraperBase:
     def close(self):
         """Closes the web driver and cleans up"""
         self.driver.close()
+        if self.s3_client != None:
+            self.s3_client.close()
