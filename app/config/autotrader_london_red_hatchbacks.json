@@ -1,5 +1,6 @@
 {
     "earlyAbortSearch": false,
+    "startPage": 1,
     "maxPage": 1,
     "search":
     {

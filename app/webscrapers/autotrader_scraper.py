@@ -5,8 +5,8 @@ import json
 import os
 
 class AutotraderWebscraper(WebScraperBase):
-    def __init__(self, config_file_name="", headless=False, driver=None, config=None, data_folder="raw_data/"):
-        super().__init__(config_file_name, headless, driver, config, data_folder)
+    def __init__(self, config_file_name="", headless=False, driver=None, config=None, data_folder="raw_data/", image_folder="images/"):
+        super().__init__(config_file_name, headless, driver, config, data_folder, image_folder)
         
         self.target_website = "https://www.autotrader.co.uk/"
 
@@ -82,12 +82,14 @@ class AutotraderWebscraper(WebScraperBase):
         hidden_element = element.find_element(self.GET_TYPE_XPATH, "../input")
         return hidden_element.get_attribute("disabled") == None
 
-    def go_next_page(self):
+    def go_to_page(self, page_number = 1):
         """Replaces the current page number in the URL and navigates to it"""
         url = self.driver.current_url
         match = re.search('page=[0-9]*', url)
-        page_number = int(match.group().replace("page=", ""))
-        url = url.replace(match.group(), f"page={page_number + 1}")
+        if match != None:
+            url = url.replace(match.group(), f"page={page_number}")
+        else:
+            url += f"&page={page_number}"
         self.driver.get(url)
         sleep(2)
 
@@ -264,7 +266,6 @@ class AutotraderWebscraper(WebScraperBase):
         self.__append_arguments_running_cost(config, search_arguments)
         self.__append_arguments_preferences(config, search_arguments)
 
-        search_arguments.append("page=1")
         search_url = f"{self.target_website}car-search?{'&'.join(search_arguments)}"
         print(search_url)
         self.driver.get(search_url)
@@ -275,11 +276,12 @@ class AutotraderWebscraper(WebScraperBase):
         Any duplicate IDs will be ignored
         """
         maxPage = self.config["maxPage"]
-        # TODO: this is very prone to errors if changed and needs to be redone
-        page = 1
+        page = self.config["startPage"]
         while page <= maxPage:
+            self.go_to_page(page)
             listings = self.driver.find_elements_by_class_name("search-page__result")
-
+            if len(listings) == 0:
+                return
             for listing in listings:
                 if listing.get_attribute("data-is-promoted-listing") == None and listing.get_attribute("data-is-yaml-listing") == None:
                     listing_id = listing.get_attribute("data-advert-id")
@@ -289,7 +291,6 @@ class AutotraderWebscraper(WebScraperBase):
                     else:
                         print("Ignored:", listing_id)
 
-            self.go_next_page()
             page += 1
 
     def scrape_all_details(self):
@@ -418,3 +419,12 @@ class AutotraderWebscraper(WebScraperBase):
             owners if owners != None else "", 
             "true" if ulez != None else "false"
             ])
+
+    def run(self):
+        self.go_to_home()
+        if self.check_for_cookie_prompt():
+            self.accept_cookies()
+        self.search()
+        self.scrape_links()
+        self.scrape_all_details()
+        self.close()

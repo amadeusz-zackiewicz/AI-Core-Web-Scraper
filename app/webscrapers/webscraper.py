@@ -25,7 +25,7 @@ class FailedToLoadConfigFileException(Exception):
     pass
 
 class WebScraperBase:
-    def __init__(self, config_file_name="", headless=False, driver=None, config=None, data_folder="raw_data/"):
+    def __init__(self, config_file_name="", headless=False, driver=None, config=None, data_folder="raw_data/", image_folder="images/"):
 
         if driver == None:
             options = webdriver.FirefoxOptions()
@@ -52,6 +52,7 @@ class WebScraperBase:
         self.target_website = ""
         self.scraped_links = []
         self.data_folder = data_folder
+        self.image_folder = image_folder
 
         os.makedirs(self.data_folder, exist_ok=True)
         os.makedirs(f"{self.data_folder}{os.path.sep}images/", exist_ok=True)
@@ -76,6 +77,9 @@ class WebScraperBase:
         self.driver.get(self.target_website)
         sleep(2)
 
+    def run(self):
+        raise NotImplementedException("run")
+
     def search(self):
         raise NotImplementedException("search")
 
@@ -85,7 +89,7 @@ class WebScraperBase:
     def scrape_links(self):
         raise NotImplementedException("scrape_links")
 
-    def go_next_page(self):
+    def go_to_page(self, page_number = 1):
         raise NotImplementedException("go_next")
 
     def create_detail_page_address(self, scraped_link: str):

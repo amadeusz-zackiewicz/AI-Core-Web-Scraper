@@ -59,10 +59,11 @@ class AutotraderTester(unittest.TestCase):
 
         scraper = AutotraderWebscraper("autotrader_default", headless=True)
         scraper.search()
+        scraper.go_to_page(1)
         assert(get_page_number(scraper.driver) == 1)
-        scraper.go_next_page()
+        scraper.go_to_page(2)
         assert(get_page_number(scraper.driver) == 2)
-        scraper.go_next_page()
+        scraper.go_to_page(3)
         assert(get_page_number(scraper.driver) == 3)
         scraper.close()
 
