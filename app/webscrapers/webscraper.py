@@ -105,12 +105,14 @@ class WebScraperBase:
 
     def scrape_image(self, file_name: str, img_url: str):
         """Downloads image from the specified URL"""
-        import urllib.request
         if self.s3_client == None:
+            import urllib.request
             urllib.request.urlretrieve(img_url, f"{self.image_folder}{file_name}.jpeg")
         else:
-            #print(urllib.request.urlopen(img_url))
-            pass
+            import requests
+            data = requests.get(url=img_url, stream=True)
+            self.s3_client.upload_image(f"{self.image_folder}{file_name}", data.raw)
+            
 
     def get_text_by_xpath(self, xpath: str, parent_element = None):
         """Convienience function to get xpaths faster"""
