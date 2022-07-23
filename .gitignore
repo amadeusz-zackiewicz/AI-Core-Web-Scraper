@@ -4,4 +4,4 @@
 *.code-workspace
 /raw_data
 /images
-__ignore*.sh
+__*.sh
