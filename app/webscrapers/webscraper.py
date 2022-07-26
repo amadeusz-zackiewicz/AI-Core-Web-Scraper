@@ -4,6 +4,8 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.action_chains import ActionChains
 from time import sleep
 from app.aws.s3 import S3Client
+from app.data.data_cleaner import DataCleaner
+from app.postsgresql.db_client import DBClient
 import json
 import os
 
@@ -22,7 +24,7 @@ class FailedToLoadConfigFileException(Exception):
     pass
 
 class WebScraperBase:
-    def __init__(self, config_file_name="", headless=False, driver=None, config=None, data_folder="raw_data/", image_folder="images/", s3_bucket=None, s3_region="us-east-1"):
+    def __init__(self, config_file_name="", headless=False, driver=None, config=None, data_folder="raw_data/", image_folder="images/", s3_bucket=None, s3_region="us-east-1", db_args=None):
 
         if driver == None:
             options = webdriver.FirefoxOptions()
@@ -50,15 +52,24 @@ class WebScraperBase:
         self.scraped_links = []
         self.data_folder = data_folder
         self.image_folder = image_folder
+        self.data_cleaner = DataCleaner()
+
+        if db_args == None:
+            self.db_client = None
+            os.makedirs(self.data_folder, exist_ok=True)
+            print("Tabular Data: No postgresql database specified, using local storage")
+        else:
+            self.db_client = DBClient(db_args)
+            print("Tabular Data: Using postgresql database")
+
 
         if s3_bucket == None or s3_bucket == "":
             self.s3_client = None
-            os.makedirs(self.data_folder, exist_ok=True)
             os.makedirs(self.image_folder, exist_ok=True)
-            print("No S3 bucket specified, using local storage")
+            print("Images: No S3 bucket specified, using local storage")
         else:
             self.s3_client = S3Client(bucket_name=s3_bucket, region=s3_region)
-            print(f"Using S3 bucket '{self.s3_client.bucket}' in region '{self.s3_client.bucket_region}'")
+            print(f"Images: Using S3 bucket '{self.s3_client.bucket}' in region '{self.s3_client.bucket_region}'")
 
         self.GET_TYPE_CSS = By.CSS_SELECTOR
         self.GET_TYPE_CLASS = By.CLASS_NAME

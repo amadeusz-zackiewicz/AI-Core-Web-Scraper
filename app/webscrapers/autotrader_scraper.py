@@ -7,8 +7,8 @@ import io
 import base64
 
 class AutotraderWebscraper(WebScraperBase):
-    def __init__(self, config_file_name="", headless=False, driver=None, config=None, data_folder="raw_data/", image_folder="images/", s3_bucket=None, s3_region="us-east-1"):
-        super().__init__(config_file_name, headless, driver, config, data_folder, image_folder, s3_bucket=s3_bucket, s3_region=s3_region)
+    def __init__(self, config_file_name="", headless=False, driver=None, config=None, data_folder="raw_data/", image_folder="images/", s3_bucket=None, s3_region="us-east-1", db_args=None):
+        super().__init__(config_file_name, headless, driver, config, data_folder, image_folder, s3_bucket=s3_bucket, s3_region=s3_region, db_args=db_args)
         
         self.target_website = "https://www.autotrader.co.uk/"
 
@@ -20,6 +20,26 @@ class AutotraderWebscraper(WebScraperBase):
             [
                 (self.GET_TYPE_XPATH, '/html/body/div[3]/iframe')
             ])
+
+        if self.db_client != None:
+            data_schema = {}
+            data_schema["id"] = "BIGSERIAL"
+            data_schema["mileage"] = "INT"
+            data_schema["price"] = "FLOAT"
+            data_schema["year"] = "INT"
+            data_schema["make"] = "VARCHAR(32)"
+            data_schema["model"] = "VARCHAR(64)"
+            data_schema["type"] = "VARCHAR(24)"
+            data_schema["engine"] = "FLOAT"
+            data_schema["gearbox"] = "VARCHAR(20)"
+            data_schema["fuel"] = "VARCHAR(24)"
+            data_schema["doors"] = "SMALLINT"
+            data_schema["seats"] = "SMALLINT"
+            data_schema["ulez"] = "BOOLEAN"
+            data_schema["owners"] = "SMALLINT"
+            self.db_client.add_table_schema("cars", data_schema, "id")
+
+
         
 
     # def accept_cookies(self):
@@ -287,18 +307,21 @@ class AutotraderWebscraper(WebScraperBase):
             for listing in listings:
                 if listing.get_attribute("data-is-promoted-listing") == None and listing.get_attribute("data-is-yaml-listing") == None:
                     listing_id = listing.get_attribute("data-advert-id")
-                    if self.s3_client == None:
-                        if not os.path.exists(f"{self.data_folder}/{listing_id}.json"):
-                            self.scraped_links.append(listing_id)
-                            print("New listing:", listing_id)
-                        else:
-                            print("Ignored:", listing_id)
-                    else:
-                        if not self.s3_client.file_exists(f"{self.data_folder}/{listing_id}"):
-                            self.scraped_links.append(listing_id)
-                            print("New listing:", listing_id)
-                        else:
-                            print("Ignored:", listing_id)
+                    self.scraped_links.append(listing_id)
+                    print("New listing:", listing_id)
+                    # TODO: image checks should be separate from tabular data since either can be on local, postgresq or s3 storage
+                    # if self.s3_client == None:
+                    #     if not os.path.exists(f"{self.data_folder}/{listing_id}.json"):
+                    #         self.scraped_links.append(listing_id)
+                    #         print("New listing:", listing_id)
+                    #     else:
+                    #         print("Ignored:", listing_id)
+                    # else: 
+                    #     if not self.s3_client.file_exists(f"{self.image_folder}/{listing_id}"):
+                    #         self.scraped_links.append(listing_id)
+                    #         print("New listing:", listing_id)
+                    #     else:
+                    #         print("Ignored:", listing_id)
 
             page += 1
 
@@ -353,7 +376,7 @@ class AutotraderWebscraper(WebScraperBase):
             if re.search("( owners)|( owner)", txt) != None:
                 number_of_owners = int(txt.replace(re.search("(owners)|(owner)", txt).group(), ""))
 
-        data["id"] = listing_id
+        data["id"] = int(listing_id)
         data["mileage"] = int(mileage.replace(",", "").replace(" miles", "").replace(" mile", ""))
         data["price"] = float(self.format_currency_to_raw_number("£", total_price))
         data["year"] = int(year.replace(re.search(" \(.*\)$", year).group(), "") if re.search(" \(.*\)$", year).group() != None else year)
@@ -366,7 +389,7 @@ class AutotraderWebscraper(WebScraperBase):
         data["doors"] = int(doors.replace(" door", "").replace("s", ""))
         data["seats"] = int(seats.replace(" seat", "").replace("s", ""))
         data["ulez"] = ulez
-        data["owners"] = number_of_owners
+        data["owners"] = int(number_of_owners)
 
         self.__save_data(data)
 
@@ -392,16 +415,12 @@ class AutotraderWebscraper(WebScraperBase):
 
 
     def __save_data(self, data: dict):
-        if self.s3_client == None:
+        if self.db_client == None:
             f = open(f"{self.data_folder}/{data['id']}.json", "w")
             json.dump(data, f, indent=4)
             f.close()
         else:
-            dump = json.dumps(data, indent=4).encode("utf-8")
-            f = io.BytesIO(dump)
-            #f.write(dump)
-            self.s3_client.upload_data(f"{self.data_folder}{data['id']}", f)
-            f.close()
+            self.db_client.insert_single_data(data, "cars")
 
     def __get_csv_header(self):
         return ", ".join([
