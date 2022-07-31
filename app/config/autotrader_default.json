@@ -1,7 +1,7 @@
 {
     "earlyAbortSearch": false,
     "startPage": 1,
-    "maxPage": 2,
+    "maxPage": 1,
     "search":
     {
         "Postcode": "EC1M 6BY",

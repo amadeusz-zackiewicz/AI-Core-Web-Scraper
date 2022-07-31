@@ -34,5 +34,8 @@ if __name__ == "__main__":
         if o == "-h" or o == "--headless":
             headless = True
 
-    scraper = AutotraderWebscraper("autotrader_london_red_hatchbacks", headless=headless, data_folder=local_data,image_folder=local_images, s3_bucket=s3_bucket, s3_region=s3_region, db_args=db_args)
-    scraper.run()
+    scraper = AutotraderWebscraper("autotrader_default", headless=headless, data_folder=local_data,image_folder=local_images, s3_bucket=s3_bucket, s3_region=s3_region, db_args=db_args)
+    try:
+        scraper.run()
+    finally:
+        scraper.close()

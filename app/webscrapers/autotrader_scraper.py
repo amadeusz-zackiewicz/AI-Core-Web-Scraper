@@ -11,6 +11,7 @@ class AutotraderWebscraper(WebScraperBase):
         super().__init__(config_file_name, headless, driver, config, data_folder, image_folder, s3_bucket=s3_bucket, s3_region=s3_region, db_args=db_args)
         
         self.target_website = "https://www.autotrader.co.uk/"
+        self.db_table_name = "cars"
 
         self.cookie_accept_button_getters.extend(
             [
@@ -27,17 +28,20 @@ class AutotraderWebscraper(WebScraperBase):
             data_schema["mileage"] = "INT"
             data_schema["price"] = "FLOAT"
             data_schema["year"] = "INT"
-            data_schema["make"] = "VARCHAR(32)"
-            data_schema["model"] = "VARCHAR(64)"
-            data_schema["type"] = "VARCHAR(24)"
+            data_schema["make"] = "INT"
+            data_schema["model"] = "INT"
+            data_schema["type"] = "INT"
             data_schema["engine"] = "FLOAT"
-            data_schema["gearbox"] = "VARCHAR(20)"
-            data_schema["fuel"] = "VARCHAR(24)"
+            data_schema["gearbox"] = "INT"
+            data_schema["fuel"] = "INT"
             data_schema["doors"] = "SMALLINT"
             data_schema["seats"] = "SMALLINT"
             data_schema["ulez"] = "BOOLEAN"
             data_schema["owners"] = "SMALLINT"
-            self.db_client.add_table_schema("cars", data_schema, "id")
+            optimise = {"make", "model", "type", "gearbox", "fuel"}
+            self.db_client.add_table_schema(self.db_table_name, data_schema, "id", optimise_text_keys=optimise)
+            if not self.db_client.table_exists(self.db_table_name):
+                self.db_client.create_table(self.db_table_name)
 
 
         
@@ -303,13 +307,24 @@ class AutotraderWebscraper(WebScraperBase):
             self.go_to_page(page)
             listings = self.driver.find_elements_by_class_name("search-page__result")
             if len(listings) == 0:
+                print(f"No listing were found on page {page}, further search will be aborted")
                 return
             for listing in listings:
                 if listing.get_attribute("data-is-promoted-listing") == None and listing.get_attribute("data-is-yaml-listing") == None:
                     listing_id = listing.get_attribute("data-advert-id")
-                    self.scraped_links.append(listing_id)
-                    print("New listing:", listing_id)
-                    # TODO: image checks should be separate from tabular data since either can be on local, postgresq or s3 storage
+                    if self.db_client == None:
+                        if not os.path.exists(f"{self.data_folder}/{listing_id}.json"):
+                            print("New listing:", listing_id)
+                            self.ids_to_scrape.append(listing_id)
+                        else:
+                            print("Listing ignored:", listing_id)
+                    else:
+                        if not self.db_client.primary_key_exists(int(listing_id), self.db_table_name, "id"):
+                            print("New listing:", listing_id)
+                            self.ids_to_scrape.append(listing_id)
+                        else:
+                            print("Listing ignored:", listing_id)
+
                     # if self.s3_client == None:
                     #     if not os.path.exists(f"{self.data_folder}/{listing_id}.json"):
                     #         self.scraped_links.append(listing_id)
@@ -331,14 +346,15 @@ class AutotraderWebscraper(WebScraperBase):
         # f.write(self.__get_csv_header())
         # f.write("\n")
         # f.close()
-        for listing_id in self.scraped_links:
-            self.scrape_details(self.create_detail_page_address(listing_id), listing_id)
+        for i, listing_id in enumerate(self.ids_to_scrape):
+            self.scrape_details(self.create_detail_page_address(listing_id), listing_id, i + 1, len(self.ids_to_scrape))
 
 
-    def scrape_details(self, link: str, listing_id: str):
+    def scrape_details(self, link: str, listing_id: str, index: int, length: int):
         """Gets all the data from the current listing and saves it into a file"""
         self.driver.get(link)
         sleep(2)
+        
         listing_image = self.driver.find_element(self.GET_TYPE_XPATH, "//img")
         image_url = listing_image.get_attribute("src")
         if image_url:
@@ -352,19 +368,24 @@ class AutotraderWebscraper(WebScraperBase):
         try:
             year = self.driver.find_element_by_xpath("/html/body/div[2]/main/div/div[2]/aside/section[2]/p[1]").text
         except:
-            year = self.driver.find_element_by_xpath("/html/body/div[2]/main/div/div[1]/aside/section[2]/p[1]").text
+            try:
+                year = self.driver.find_element_by_xpath("/html/body/div[2]/main/div/div[1]/aside/section[2]/p[1]").text
+            except:
+                from datetime import date
+                year = date.today().year
 
         total_price = self.get_text_by_xpath('//*[@data-testid="total-price-value"]')
         mileage = self.get_text_by_xpath('//*[@data-testid="mileage"]')
         details_panel = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="key-specs-section"]')
 
         details = details_panel.find_elements_by_xpath("li")
+
         type = details[0].text
-        engine_size = details[1].text
+        engine_size = float(details[1].text.replace("L", "")) if details[1].text != "Unlisted" else -1.0
         gearbox = details[2].text
         fuel = details[3].text
-        doors = details[4].text
-        seats = details[5].text
+        doors = 0
+        seats = 0
 
         ulez = False
         number_of_owners = 0
@@ -374,7 +395,11 @@ class AutotraderWebscraper(WebScraperBase):
             if re.search("ULEZ", txt) != None:
                 ulez = True
             if re.search("( owners)|( owner)", txt) != None:
-                number_of_owners = int(txt.replace(re.search("(owners)|(owner)", txt).group(), ""))
+                number_of_owners = int(txt.replace(" owner", "").replace("s", ""))
+            if re.search("( seats)|( seat)", txt) != None:
+                seats = int(txt.replace(" seat", "").replace("s", ""))
+            if re.search("( doors)|( door)", txt) != None:
+                doors = int(txt.replace(" door", "").replace("s", ""))
 
         data["id"] = int(listing_id)
         data["mileage"] = int(mileage.replace(",", "").replace(" miles", "").replace(" mile", ""))
@@ -383,17 +408,17 @@ class AutotraderWebscraper(WebScraperBase):
         data["make"] = make
         data["model"] = model
         data["type"] = type
-        data["engine"] = float(engine_size.replace("L", ""))
+        data["engine"] = engine_size
         data["gearbox"] = gearbox
         data["fuel"] = fuel
-        data["doors"] = int(doors.replace(" door", "").replace("s", ""))
-        data["seats"] = int(seats.replace(" seat", "").replace("s", ""))
+        data["doors"] = doors
+        data["seats"] = seats
         data["ulez"] = ulez
-        data["owners"] = int(number_of_owners)
+        data["owners"] = number_of_owners
 
         self.__save_data(data)
+        print(f"Scraped: {listing_id} {index}/{length} -- {make} {model} -- {data['year']} -- {total_price}")
 
-        # TODO: missing year, ULEZ, numbers of owners
 
         #f = open("{self.data_folder}/results.csv", "a")
         # f.write(
@@ -420,7 +445,7 @@ class AutotraderWebscraper(WebScraperBase):
             json.dump(data, f, indent=4)
             f.close()
         else:
-            self.db_client.insert_single_data(data, "cars")
+            self.db_client.insert_single_data(data, self.db_table_name)
 
     def __get_csv_header(self):
         return ", ".join([

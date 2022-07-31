@@ -49,7 +49,7 @@ class WebScraperBase:
             raise FailedToLoadConfigFileException(config_file_name)
 
         self.target_website = ""
-        self.scraped_links = []
+        self.ids_to_scrape = []
         self.data_folder = data_folder
         self.image_folder = image_folder
         self.data_cleaner = DataCleaner()
