@@ -37,5 +37,5 @@ if __name__ == "__main__":
     scraper = AutotraderWebscraper("autotrader_default", headless=headless, data_folder=local_data,image_folder=local_images, s3_bucket=s3_bucket, s3_region=s3_region, db_args=db_args)
     try:
         scraper.run()
-    finally:
+    except:
         scraper.close()

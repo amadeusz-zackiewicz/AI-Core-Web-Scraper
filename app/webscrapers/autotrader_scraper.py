@@ -352,72 +352,83 @@ class AutotraderWebscraper(WebScraperBase):
 
     def scrape_details(self, link: str, listing_id: str, index: int, length: int):
         """Gets all the data from the current listing and saves it into a file"""
-        self.driver.get(link)
-        sleep(2)
-        
-        listing_image = self.driver.find_element(self.GET_TYPE_XPATH, "//img")
-        image_url = listing_image.get_attribute("src")
-        if image_url:
-            self.scrape_image(listing_id, image_url)
-
-        data = {}
-
-        title = self.get_text_by_xpath('//*[@data-gui="advert-title"]')
-        make, model = title.split(" ", 1)
-
         try:
-            year = self.driver.find_element_by_xpath("/html/body/div[2]/main/div/div[2]/aside/section[2]/p[1]").text
-        except:
+            self.driver.get(link)
+            sleep(2)
+            
+            listing_image = self.driver.find_element(self.GET_TYPE_XPATH, "//img")
+            image_url = listing_image.get_attribute("src")
+            if image_url:
+                self.scrape_image(listing_id, image_url)
+
+            data = {}
+
+            title = self.get_text_by_xpath('//*[@data-gui="advert-title"]')
+            make, model = title.split(" ", 1)
+
             try:
-                year = self.driver.find_element_by_xpath("/html/body/div[2]/main/div/div[1]/aside/section[2]/p[1]").text
+                year = int(self.driver.find_element_by_xpath("/html/body/div[2]/main/div/div[2]/aside/section[2]/p[1]").text.replace(re.search(" \(.*\)$", year).group(), ""))
             except:
-                from datetime import date
-                year = date.today().year
+                try:
+                    year = int(self.driver.find_element_by_xpath("/html/body/div[2]/main/div/div[1]/aside/section[2]/p[1]").text.replace(re.search(" \(.*\)$", year).group(), ""))
+                except:
+                    from datetime import date
+                    year = date.today().year
 
-        total_price = self.get_text_by_xpath('//*[@data-testid="total-price-value"]')
-        mileage = self.get_text_by_xpath('//*[@data-testid="mileage"]')
-        details_panel = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="key-specs-section"]')
+            total_price = self.get_text_by_xpath('//*[@data-testid="total-price-value"]')
+            mileage = self.get_text_by_xpath('//*[@data-testid="mileage"]')
+            details_panel = self.driver.find_element(self.GET_TYPE_XPATH, '//*[@data-gui="key-specs-section"]')
 
-        details = details_panel.find_elements_by_xpath("li")
+            details = details_panel.find_elements_by_xpath("li")
 
-        type = details[0].text
-        engine_size = float(details[1].text.replace("L", "")) if details[1].text != "Unlisted" else -1.0
-        gearbox = details[2].text
-        fuel = details[3].text
-        doors = 0
-        seats = 0
+            type = "Unlisted"
+            engine_size = 0.0
+            gearbox = "Unlisted"
+            fuel = "Unlisted"
+            doors = 0
+            seats = 0
 
-        ulez = False
-        number_of_owners = 0
+            ulez = False
+            number_of_owners = 0
 
-        for det in details:
-            txt = det.text
-            if re.search("ULEZ", txt) != None:
-                ulez = True
-            if re.search("( owners)|( owner)", txt) != None:
-                number_of_owners = int(txt.replace(" owner", "").replace("s", ""))
-            if re.search("( seats)|( seat)", txt) != None:
-                seats = int(txt.replace(" seat", "").replace("s", ""))
-            if re.search("( doors)|( door)", txt) != None:
-                doors = int(txt.replace(" door", "").replace("s", ""))
+            for det in details:
+                txt = det.text
+                if re.search("ULEZ", txt) != None:
+                    ulez = True
+                if re.search("( owners)|( owner)", txt) != None:
+                    number_of_owners = int(txt.replace(" owner", "").replace("s", ""))
+                if re.search("( seats)|( seat)", txt) != None:
+                    seats = int(txt.replace(" seat", "").replace("s", ""))
+                if re.search("( doors)|( door)", txt) != None:
+                    doors = int(txt.replace(" door", "").replace("s", ""))
+                if txt in self.config["search"]["Fuel type"]:
+                    fuel = txt
+                if re.search("(Manual)|(Automatic)", txt) != None:
+                    gearbox = txt
+                if re.search("[0-9]*\.[0-9]*L$", txt) != None:
+                    engine_size = float(txt.replace("L", ""))
+                if txt in self.config["search"]["Body type"]:
+                    type = txt
 
-        data["id"] = int(listing_id)
-        data["mileage"] = int(mileage.replace(",", "").replace(" miles", "").replace(" mile", ""))
-        data["price"] = float(self.format_currency_to_raw_number("£", total_price))
-        data["year"] = int(year.replace(re.search(" \(.*\)$", year).group(), "") if re.search(" \(.*\)$", year).group() != None else year)
-        data["make"] = make
-        data["model"] = model
-        data["type"] = type
-        data["engine"] = engine_size
-        data["gearbox"] = gearbox
-        data["fuel"] = fuel
-        data["doors"] = doors
-        data["seats"] = seats
-        data["ulez"] = ulez
-        data["owners"] = number_of_owners
+            data["id"] = int(listing_id)
+            data["mileage"] = int(mileage.replace(",", "").replace(" miles", "").replace(" mile", ""))
+            data["price"] = float(self.format_currency_to_raw_number("£", total_price))
+            data["year"] = year
+            data["make"] = make
+            data["model"] = model
+            data["type"] = type
+            data["engine"] = engine_size
+            data["gearbox"] = gearbox
+            data["fuel"] = fuel
+            data["doors"] = doors
+            data["seats"] = seats
+            data["ulez"] = ulez
+            data["owners"] = number_of_owners
 
-        self.__save_data(data)
-        print(f"Scraped: {listing_id} {index}/{length} -- {make} {model} -- {data['year']} -- {total_price}")
+            self.__save_data(data)
+            print(f"Scraped: {listing_id} {index}/{length} -- {make} {model} -- {data['year']} -- {total_price}")
+        except:
+            print(f"Failed: {listing_id} {index}/{length} due to exception")
 
 
         #f = open("{self.data_folder}/results.csv", "a")
@@ -499,10 +510,12 @@ class AutotraderWebscraper(WebScraperBase):
             ])
 
     def run(self):
-        self.go_to_home()
-        if self.check_for_cookie_prompt():
-            self.accept_cookies()
-        self.search()
-        self.scrape_links()
-        self.scrape_all_details()
-        self.close()
+        try:
+            self.go_to_home()
+            if self.check_for_cookie_prompt():
+                self.accept_cookies()
+            self.search()
+            self.scrape_links()
+            self.scrape_all_details()
+        finally:
+            self.close()
