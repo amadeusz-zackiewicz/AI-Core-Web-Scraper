@@ -159,7 +159,7 @@ class DBClient:
         cursor = self.execute_query(query)
         return cursor.fetchall()
 
-    def create_table(self, table_name: str, schema=None or dict, primary_key=None or str, optimise=None or set):
+    def create_table(self, table_name: str, schema=None, primary_key=None, optimise=None):
         """
         Create a table.
 
@@ -185,12 +185,11 @@ class DBClient:
             except:
                 pass
 
-
         self.add_table_schema(table_name, schema, primary_key, optimise)
 
         schema_unpacked = [" ".join(item) for item in schema.items()]
 
-        query = f"CREATE TABLE {table_name} ({', '.join(schema_unpacked)}, PRIMARY KEY ({self.__primary_key[table_name]}))"
+        query = f"CREATE TABLE {table_name} ({', '.join(schema_unpacked)}, PRIMARY KEY ({primary_key}))"
         self.execute_query(query)
         self.db.commit()
         print("Created table:", table_name)
