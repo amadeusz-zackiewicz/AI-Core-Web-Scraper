@@ -109,7 +109,7 @@ class AutotraderWebscraper(WebScraperBase):
         return hidden_element.get_attribute("disabled") == None
 
     def go_to_page(self, page_number = 1):
-        """Replaces the current page number in the URL and navigates to it"""
+        
         url = self.driver.current_url
         match = re.search('page=[0-9]*', url)
         if match != None:
@@ -272,7 +272,6 @@ class AutotraderWebscraper(WebScraperBase):
         return f"{argument_name}={'%2C'.join(arguments)}"
 
     def search(self, config = None):
-        """Generates the search URL and navigates to the first page"""
         search_arguments = []
         if config == None:
             config = self.config["search"]
@@ -297,10 +296,7 @@ class AutotraderWebscraper(WebScraperBase):
         self.driver.get(search_url)
 
     def scrape_links(self):
-        """
-        Gets all the listing IDs from the current page and navigates to the next one, page amount can be specified in the config file.
-        Any duplicate IDs will be ignored
-        """
+
         maxPage = self.config["maxPage"]
         page = self.config["startPage"]
         while page <= maxPage:
@@ -325,35 +321,28 @@ class AutotraderWebscraper(WebScraperBase):
                         else:
                             print("Listing ignored:", listing_id)
 
-                    # if self.s3_client == None:
-                    #     if not os.path.exists(f"{self.data_folder}/{listing_id}.json"):
-                    #         self.scraped_links.append(listing_id)
-                    #         print("New listing:", listing_id)
-                    #     else:
-                    #         print("Ignored:", listing_id)
-                    # else: 
-                    #     if not self.s3_client.file_exists(f"{self.image_folder}/{listing_id}"):
-                    #         self.scraped_links.append(listing_id)
-                    #         print("New listing:", listing_id)
-                    #     else:
-                    #         print("Ignored:", listing_id)
-
             page += 1
 
     def scrape_all_details(self):
         """Loops through all the listing IDs and gets the neccessary data"""
-        # f = open("{self.data_folder}/results.csv", "w")
-        # f.write(self.__get_csv_header())
-        # f.write("\n")
-        # f.close()
+
         for i, listing_id in enumerate(self.ids_to_scrape):
             self.scrape_details(self.create_detail_page_address(listing_id), listing_id, i + 1, len(self.ids_to_scrape))
 
 
-    def scrape_details(self, link: str, listing_id: str, index: int, length: int):
-        """Gets all the data from the current listing and saves it into a file"""
+    def scrape_details(self, url: str, listing_id: str, index: int, length: int):
+        """
+        Gets all the data from the specified listing and either saves it into the local disk or database. 
+        Will skip the page in case of exception.
+
+        Args:
+            url: URL that contains the details page
+            listing_id: ID of the listing, this will be used a primary key or file name
+            index: used to display information about how far the scraper has progressed
+            length: used to display information about how far the scraper is supposed to progress
+        """
         try:
-            self.driver.get(link)
+            self.driver.get(url)
             sleep(2)
             
             listing_image = self.driver.find_element(self.GET_TYPE_XPATH, "//img")
@@ -431,32 +420,13 @@ class AutotraderWebscraper(WebScraperBase):
             print(f"Failed: {listing_id} {index}/{length} due to exception")
 
 
-        #f = open("{self.data_folder}/results.csv", "a")
-        # f.write(
-        #     self.__format_csv_line(
-        #         listing_id=listing_id,
-        #         type=type,
-        #         engine_size=engine_size,
-        #         gearbox=gearbox,
-        #         fuel=fuel,
-        #         doors=doors,
-        #         seats=seats,
-        #         make=make,
-        #         model=model,
-        #         total_price=total_price,
-        #         mileage=mileage
-        #     ))
-        # f.write("\n")
-        # f.close()
-
-
     def __save_data(self, data: dict):
         if self.db_client == None:
             f = open(f"{self.data_folder}/{data['id']}.json", "w")
             json.dump(data, f, indent=4)
             f.close()
         else:
-            self.db_client.insert_single_data(data, self.db_table_name)
+            self.db_client.insert_single_row(data, self.db_table_name)
 
     def __get_csv_header(self):
         return ", ".join([

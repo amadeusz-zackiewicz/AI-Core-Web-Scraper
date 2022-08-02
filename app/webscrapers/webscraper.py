@@ -92,30 +92,73 @@ class WebScraperBase:
         sleep(2)
 
     def run(self):
+        """
+        Runs the scraper based on the information provided during initialisation.
+
+        Raises:
+            NotImplementedException: If this method is not overriden by the child class
+        """
         raise NotImplementedException("run")
 
     def search(self):
+        """
+        Generates the search URL and navigates to the first page
+
+        Args:
+            config: A dictionary containing information required to create a search URL.
+        
+        Raises:
+            NotImplementedException: If this method is not overriden by the child class
+        """
         raise NotImplementedException("search")
 
     def scrape_details(self, link: str):
         raise NotImplementedException("scrape_link")
 
     def scrape_links(self):
+        """
+        Gets all the listing IDs from the current page and navigates to the next one, page amount can be specified in the config file.
+        Any duplicate IDs will be ignored
+
+        Raises:
+            NotImplementedException: If this method is not overriden by the child class
+        """
         raise NotImplementedException("scrape_links")
 
     def go_to_page(self, page_number = 1):
+        """
+        Replaces the current page number in the URL and navigates to it
+        
+        Args:
+            page_number: the page number that will be navigated to
+
+        Raises:
+            NotImplementedException: If this method is not overriden by the child class
+        """
         raise NotImplementedException("go_next")
 
     def create_detail_page_address(self, scraped_link: str):
         return f'{self.target_website}car-details/{scraped_link}'
 
     def input_text(self, element, text):
-        """Simulates user input of specified keys on the element"""
+        """
+        Input text into specified element.
+
+        Args:
+            element: web elements to input text into
+            text: the text that will be entered
+        """
         element.click()
         element.send_keys(text)
 
     def scrape_image(self, file_name: str, img_url: str):
-        """Downloads image from the specified URL"""
+        """
+        Downloads image from the specified URL and either saves it into local storage or uploads it to the S3
+        
+        Args:
+            file_name: name of the file or key for S3 bucket
+            img_url: the URL from which the image will be taken from
+        """
         if self.s3_client == None:
             import urllib.request
             urllib.request.urlretrieve(img_url, f"{self.image_folder}{file_name}.jpeg")
@@ -126,14 +169,33 @@ class WebScraperBase:
             
 
     def get_text_by_xpath(self, xpath: str, parent_element = None):
-        """Convienience function to get xpaths faster"""
+        """
+        Convienience function to get xpaths faster
+        
+        Args:
+            xpath: the xpath that will be used to get the element containing text
+            parent_element: if provided, the xpath will be used relative from the element
+
+        Returns:
+            String or None
+        """
         if parent_element == None:
             return self.driver.find_element(self.GET_TYPE_XPATH, xpath).text
         else:
             return parent_element.find_element(self.GET_TYPE_XPATH, xpath).text
 
-    def format_currency_to_raw_number(self, currency: str, input: str):
-        """Convienience function to remove currency symbols and commas from a number"""
+    def format_currency_to_raw_number(self, currency: str, input: str) -> str:
+        """
+        Convienience function to remove currency symbols and commas from a number
+        
+        Args:
+            currency: the currency symbol
+            input: the raw text
+
+        Returns:
+            A string stripped from commas and currency symbol
+        
+        """
         return input.replace(currency, "").replace(",", "")
 
     def check_for_cookie_prompt(self, return_element=False) -> bool:
@@ -170,7 +232,14 @@ class WebScraperBase:
         return FailedToFindButtonToAcceptCookiesException()
 
     def select_drop_down_by_value(self, element, target):
-        """Simulates user clicking on the drop down menu and its element"""
+        """
+        Open a drop down menu and select a value.
+
+        Args:
+            element: web element that contains the drop down menu
+            target: the value that will be clicked on
+        
+        """
         element.click()
         selection = Select(element)
         selection.select_by_value(target)
@@ -178,7 +247,12 @@ class WebScraperBase:
         selection.first_selected_option.click()
 
     def hover_and_click_element(self, element):
-        """Simulates user moving the mouse over the element and clicking it"""
+        """
+        Hover over the element and simulate a click.
+
+        Args:
+            element: web element that will be clicked on.
+        """
         action = ActionChains(self.driver)
         self.driver.execute_script("arguments[0].scrollIntoView();", element)
         action.move_to_element_with_offset(element, 3, 3)
@@ -191,3 +265,5 @@ class WebScraperBase:
         self.driver.close()
         if self.s3_client != None:
             self.s3_client.close()
+        if self.db_client != None:
+            self.db_client.close()
