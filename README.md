@@ -11,8 +11,7 @@ The following arguments are available:
 
 - `--local_data` to specify where data should be saved on the local machine. 
 
-Example:
-- `--local_data=data/raw/`
+Example: `--local_data=data/raw/`
 
 - `--local_images` to specify where images should be sabed on the local machine. 
 
