@@ -26,7 +26,7 @@ Example: `--s3_region=eu-west-2 --s3_bucket=my-bucket-name`
 
 - `db_args` to specify connection information for the database.
 
-Example: `db_args="host=localhost dbname=postgres user=postgres password=postgres"`
+Example: `--db_args="host=localhost dbname=postgres user=postgres password=postgres"`
 
 ---
 
